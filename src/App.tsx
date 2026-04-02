@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Users, MessageSquare, Settings, Play, Square, Database, Key, Hash, Phone, Minus, Maximize2, X, Twitter } from 'lucide-react';
+import { Activity, Users, MessageSquare, Settings, Play, Square, Database, Key, Hash, Phone, Minus, Maximize2, X, Twitter, HelpCircle } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -335,6 +335,10 @@ export default function App() {
             <button onClick={() => setActiveTab('twitter')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'twitter' ? 'bg-[#1b4332] text-[#d8f3dc]' : 'text-[#95d5b2] hover:bg-[#1b4332]/50 hover:text-[#d8f3dc]'}`}>
               <Twitter size={18} />
               <span className="font-medium">Twitter (X) Auto</span>
+            </button>
+            <button onClick={() => setActiveTab('instructions')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'instructions' ? 'bg-[#1b4332] text-[#d8f3dc]' : 'text-[#95d5b2] hover:bg-[#1b4332]/50 hover:text-[#d8f3dc]'}`}>
+              <HelpCircle size={18} />
+              <span className="font-medium">Instructions</span>
             </button>
             <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-[#1b4332] text-[#d8f3dc]' : 'text-[#95d5b2] hover:bg-[#1b4332]/50 hover:text-[#d8f3dc]'}`}>
               <Settings size={18} />
@@ -741,6 +745,104 @@ export default function App() {
                   >
                     Execute Twitter Action
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'instructions' && (
+            <div className="space-y-8 max-w-4xl mx-auto pb-12">
+              <div className="flex items-center space-x-4 mb-8">
+                <div className="p-3 bg-[#1b4332] rounded-xl border-4 border-[#95d5b2] shadow-[4px_4px_0px_0px_#95d5b2]">
+                  <HelpCircle size={32} className="text-[#52b788]" />
+                </div>
+                <div>
+                  <h2 className="text-3xl font-bold text-[#d8f3dc]">User Manual</h2>
+                  <p className="text-[#95d5b2]">Master the AutoPROMO Automation Suite</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-8">
+                {/* Section 1: Sessions */}
+                <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-8 shadow-lg shadow-black/80">
+                  <h3 className="text-xl font-bold text-[#d8f3dc] mb-4 flex items-center">
+                    <span className="w-8 h-8 bg-[#52b788] text-black rounded-full flex items-center justify-center mr-3 text-sm">1</span>
+                    Setting Up Sessions
+                  </h3>
+                  <div className="space-y-4 text-[#95d5b2] text-sm leading-relaxed">
+                    <p>To start automating, you need to connect your Telegram accounts. Go to the <span className="text-[#d8f3dc] font-bold">Sessions</span> tab:</p>
+                    <ul className="list-disc pl-5 space-y-2">
+                      <li>Get your <span className="text-[#d8f3dc]">API ID</span> and <span className="text-[#d8f3dc]">API Hash</span> from <a href="https://my.telegram.org" target="_blank" className="underline hover:text-[#52b788]">my.telegram.org</a>.</li>
+                      <li>Enter your phone number in international format (e.g., <span className="font-mono">+1234567890</span>).</li>
+                      <li>Wait for the Telegram login code and enter it in the app.</li>
+                      <li>Once "Active", your account is ready for automation.</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Section 2: Targets */}
+                <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-8 shadow-lg shadow-black/80">
+                  <h3 className="text-xl font-bold text-[#d8f3dc] mb-4 flex items-center">
+                    <span className="w-8 h-8 bg-[#52b788] text-black rounded-full flex items-center justify-center mr-3 text-sm">2</span>
+                    Finding Your Audience
+                  </h3>
+                  <div className="space-y-4 text-[#95d5b2] text-sm leading-relaxed">
+                    <p>Use the <span className="text-[#d8f3dc] font-bold">Targets & Keywords</span> tab to define where to find users:</p>
+                    <ul className="list-disc pl-5 space-y-2">
+                      <li><span className="text-[#d8f3dc] font-bold">Target Groups:</span> Add public group usernames (e.g., <span className="font-mono">@crypto_group</span>).</li>
+                      <li><span className="text-[#d8f3dc] font-bold">Keywords:</span> Add words you want to listen for in real-time.</li>
+                      <li><span className="text-[#d8f3dc] font-bold">Scraper:</span> Run the scraper on a target group to build a list of active users in the <span className="text-[#d8f3dc] font-bold">Scraped Users</span> tab.</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Section 3: Operator */}
+                <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-8 shadow-lg shadow-black/80">
+                  <h3 className="text-xl font-bold text-[#d8f3dc] mb-4 flex items-center">
+                    <span className="w-8 h-8 bg-[#52b788] text-black rounded-full flex items-center justify-center mr-3 text-sm">3</span>
+                    The Operator (Auto-DM)
+                  </h3>
+                  <div className="space-y-4 text-[#95d5b2] text-sm leading-relaxed">
+                    <p>The <span className="text-[#d8f3dc] font-bold">Operator</span> is your main outreach tool:</p>
+                    <ul className="list-disc pl-5 space-y-2">
+                      <li><span className="text-[#d8f3dc] font-bold">Spintax:</span> Use <span className="font-mono">{"{Hi|Hello|Hey}"}</span> to randomize your messages. This is CRITICAL to avoid being flagged as spam.</li>
+                      <li><span className="text-[#d8f3dc] font-bold">Daily Limits:</span> Keep your daily limits low (10-20 per account) to stay under Telegram's radar.</li>
+                      <li>The Operator will automatically message users from your <span className="text-[#d8f3dc]">Scraped Users</span> list.</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Section 4: Twitter */}
+                <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-8 shadow-lg shadow-black/80">
+                  <h3 className="text-xl font-bold text-[#d8f3dc] mb-4 flex items-center">
+                    <span className="w-8 h-8 bg-[#52b788] text-black rounded-full flex items-center justify-center mr-3 text-sm">4</span>
+                    Twitter (X) Automation
+                  </h3>
+                  <div className="space-y-4 text-[#95d5b2] text-sm leading-relaxed">
+                    <p>Automate your X presence in the <span className="text-[#d8f3dc] font-bold">Twitter Auto</span> tab:</p>
+                    <ul className="list-disc pl-5 space-y-2">
+                      <li>Enter a target tweet URL or a username.</li>
+                      <li>Select an action: <span className="text-[#d8f3dc]">Like, Retweet, Follow, or Reply</span>.</li>
+                      <li>The app uses your connected X accounts to execute these actions automatically.</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Section 5: Safety */}
+                <div className="bg-rose-950/30 border-4 border-rose-500/50 rounded-xl p-8">
+                  <h3 className="text-xl font-bold text-rose-400 mb-4 flex items-center">
+                    <X size={20} className="mr-3" />
+                    Safety & Best Practices
+                  </h3>
+                  <div className="space-y-4 text-rose-200/70 text-sm leading-relaxed">
+                    <p>Automation carries risks. Follow these rules to protect your accounts:</p>
+                    <ul className="list-disc pl-5 space-y-2">
+                      <li><span className="text-rose-400 font-bold">Warm-up:</span> Start with 2-5 messages per day on new accounts.</li>
+                      <li><span className="text-rose-400 font-bold">Variety:</span> Never send the exact same message twice. Use heavy spintax.</li>
+                      <li><span className="text-rose-400 font-bold">Proxies:</span> If running more than 3 accounts, use a proxy for each session.</li>
+                      <li><span className="text-rose-400 font-bold">Respect Limits:</span> If an account gets "Limited", stop all automation for 48 hours.</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>

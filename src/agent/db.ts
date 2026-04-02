@@ -42,12 +42,22 @@ interface Log {
   created_at: string;
 }
 
+interface TwitterAccount {
+  id: number;
+  name: string;
+  auth_token: string;
+  ct0: string;
+  status: string;
+  created_at: string;
+}
+
 interface DBSchema {
   sessions: Session[];
   keywords: Keyword[];
   groups: Group[];
   scraped_users: ScrapedUser[];
   logs: Log[];
+  twitter_accounts: TwitterAccount[];
 }
 
 class DB {
@@ -59,7 +69,8 @@ class DB {
     keywords: [],
     groups: [],
     scraped_users: [],
-    logs: []
+    logs: [],
+    twitter_accounts: []
   };
 
   async init() {
@@ -238,6 +249,30 @@ class DB {
     if (this.data.logs.length > 1000) {
       this.data.logs = this.data.logs.slice(-1000);
     }
+    await this.save();
+  }
+
+  // Twitter Accounts
+  async getTwitterAccounts() {
+    return this.data.twitter_accounts;
+  }
+
+  async addTwitterAccount(name: string, authToken: string, ct0: string) {
+    const account: TwitterAccount = {
+      id: this.generateId(this.data.twitter_accounts),
+      name,
+      auth_token: authToken,
+      ct0,
+      status: 'active',
+      created_at: new Date().toISOString()
+    };
+    this.data.twitter_accounts.push(account);
+    await this.save();
+    return account;
+  }
+
+  async deleteTwitterAccount(id: number) {
+    this.data.twitter_accounts = this.data.twitter_accounts.filter(a => a.id !== id);
     await this.save();
   }
 }

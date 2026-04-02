@@ -38,7 +38,7 @@ class TwitterAutomation {
     return limit;
   }
 
-  async executeAction(account: string, target: string, action: string, content?: string) {
+  async executeAction(account: string, target: string, action: string, credentials: { authToken: string, ct0: string }, content?: string) {
     const limit = this.getRateLimit(account, action);
     
     if (limit.count >= limit.limit) {
@@ -46,7 +46,11 @@ class TwitterAutomation {
       throw new Error(`Twitter Rate Limit Hit for ${action}. Please wait ${waitMins} minutes.`);
     }
 
-    db.addLog('system', `[Twitter] Initiating ${action} on ${target} using ${account}`);
+    if (!credentials.authToken || !credentials.ct0) {
+      throw new Error(`Missing credentials for Twitter account: ${account}`);
+    }
+
+    db.addLog('system', `[Twitter] Initiating ${action} on ${target} using ${account} (Token: ${credentials.authToken.substring(0, 4)}...)`);
     
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 1500));

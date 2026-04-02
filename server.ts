@@ -189,7 +189,19 @@ async function startServer() {
   app.post("/api/twitter/action", async (req, res) => {
     const { account, target, action, content } = req.body;
     try {
-      const result = await twitterAutomation.executeAction(account, target, action, content);
+      const accounts = await db.getTwitterAccounts();
+      const accountData = accounts.find(a => a.name === account);
+      if (!accountData) {
+        throw new Error(`Twitter account ${account} not found in database.`);
+      }
+
+      const result = await twitterAutomation.executeAction(
+        account, 
+        target, 
+        action, 
+        { authToken: accountData.auth_token, ct0: accountData.ct0 },
+        content
+      );
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -201,6 +213,33 @@ async function startServer() {
     try {
       const status = twitterAutomation.getAccountStatus(account);
       res.json(status);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Twitter Accounts API
+  app.get("/api/twitter/accounts", async (req, res) => {
+    const accounts = await db.getTwitterAccounts();
+    // Don't send sensitive tokens to frontend in list
+    res.json(accounts.map(a => ({ id: a.id, name: a.name, status: a.status, created_at: a.created_at })));
+  });
+
+  app.post("/api/twitter/accounts", async (req, res) => {
+    const { name, authToken, ct0 } = req.body;
+    try {
+      const account = await db.addTwitterAccount(name, authToken, ct0);
+      res.json(account);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete("/api/twitter/accounts/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      await db.deleteTwitterAccount(Number(id));
+      res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

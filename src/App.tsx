@@ -43,6 +43,7 @@ export default function App() {
   const [users, setUsers] = useState<any[]>([]);
   const [toasts, setToasts] = useState<{id: number, message: string, type: 'success' | 'error'}[]>([]);
   const [twitterStatus, setTwitterStatus] = useState<any>(null);
+  const [twitterAccounts, setTwitterAccounts] = useState<any[]>([]);
 
   const addToast = (message: string, type: 'success' | 'error' = 'success') => {
     const id = Date.now();
@@ -57,11 +58,12 @@ export default function App() {
   const [authCode, setAuthCode] = useState({ sessionId: null, code: '', password: '' });
   const [newKeyword, setNewKeyword] = useState('');
   const [newGroup, setNewGroup] = useState({ groupId: '', name: '' });
+  const [newTwitterAccount, setNewTwitterAccount] = useState({ name: '', authToken: '', ct0: '' });
   const [operatorConfig, setOperatorConfig] = useState({ sessionId: '', template: '{Hey|Hi|Hello}, saw you in the airdrop group. {Are you farming|Have you checked out} farmdash.one?', maxPerDay: 15 });
   const [scrapeConfig, setScrapeConfig] = useState({ sessionId: '', groupId: '' });
   const [listenerConfig, setListenerConfig] = useState({ sessionId: '' });
   const [engagementConfig, setEngagementConfig] = useState({ sessionId: '', target: '', action: 'react', emoji: '👍' });
-  const [twitterConfig, setTwitterConfig] = useState({ account: 'Account 1', target: '', action: 'like', content: '' });
+  const [twitterConfig, setTwitterConfig] = useState({ account: '', target: '', action: 'like', content: '' });
   const [advancedConfig, setAdvancedConfig] = useState({
     multiAccount: false,
     maxAccounts: 5,
@@ -89,22 +91,33 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    fetchData();
+  }, [twitterConfig.account]);
+
   const fetchData = async () => {
     try {
-      const [logsRes, sessionsRes, keywordsRes, groupsRes, usersRes, twitterRes] = await Promise.all([
+      const [logsRes, sessionsRes, keywordsRes, groupsRes, usersRes, twitterAccountsRes] = await Promise.all([
         fetch('/api/logs').then(r => r.json()),
         fetch('/api/sessions').then(r => r.json()),
         fetch('/api/keywords').then(r => r.json()),
         fetch('/api/groups').then(r => r.json()),
         fetch('/api/users').then(r => r.json()),
-        fetch(`/api/twitter/status/${twitterConfig.account}`).then(r => r.json())
+        fetch('/api/twitter/accounts').then(r => r.json())
       ]);
       setLogs(Array.isArray(logsRes) ? logsRes : []);
       setSessions(Array.isArray(sessionsRes) ? sessionsRes : []);
       setKeywords(Array.isArray(keywordsRes) ? keywordsRes : []);
       setGroups(Array.isArray(groupsRes) ? groupsRes : []);
       setUsers(Array.isArray(usersRes) ? usersRes : []);
-      setTwitterStatus(twitterRes);
+      setTwitterAccounts(Array.isArray(twitterAccountsRes) ? twitterAccountsRes : []);
+
+      if (twitterConfig.account) {
+        const twitterRes = await fetch(`/api/twitter/status/${twitterConfig.account}`).then(r => r.json());
+        setTwitterStatus(twitterRes);
+      } else {
+        setTwitterStatus(null);
+      }
     } catch (e) {
       console.error("Failed to fetch data", e);
     }
@@ -217,6 +230,49 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCreateTwitterAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/twitter/accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTwitterAccount)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to add Twitter account');
+      setNewTwitterAccount({ name: '', authToken: '', ct0: '' });
+      addToast('Twitter account added', 'success');
+      fetchData();
+    } catch (err: any) {
+      addToast(err.message, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteTwitterAccount = (id: number) => {
+    setModal({
+      isOpen: true,
+      title: 'Delete Twitter Account',
+      message: 'Are you sure you want to delete this Twitter account?',
+      onConfirm: async () => {
+        setIsLoading(true);
+        try {
+          const res = await fetch(`/api/twitter/accounts/${id}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error('Failed to delete Twitter account');
+          addToast('Twitter account deleted', 'success');
+          fetchData();
+        } catch (err: any) {
+          addToast(err.message, 'error');
+        } finally {
+          setIsLoading(false);
+          setModal(null);
+        }
+      }
+    });
   };
 
   const handleStartScraper = async () => {
@@ -638,81 +694,292 @@ export default function App() {
           )}
 
           {activeTab === 'sessions' && (
-            <div className="space-y-6 max-w-6xl mx-auto">
-              <h2 className="text-2xl font-bold text-[#d8f3dc]">Session Management</h2>
+            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-bold text-[#d8f3dc] flex items-center">
+                    <Activity size={32} className="mr-4 text-[#52b788]" />
+                    Sessions & Accounts
+                  </h2>
+                  <p className="text-[#95d5b2] mt-2">Manage your Telegram and Twitter automation identities.</p>
+                </div>
+              </div>
               
-              <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-6 shadow-lg shadow-black/80">
-                <h3 className="text-lg font-medium text-[#d8f3dc] mb-4">Add New Telegram Account</h3>
-                {authCode.sessionId ? (
-                  <form onSubmit={handleVerifySession} className="space-y-4 max-w-md">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Telegram Session Creation */}
+                <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-8 shadow-lg shadow-black/80">
+                  <h3 className="text-xl font-bold text-[#d8f3dc] mb-6 flex items-center">
+                    <MessageSquare size={20} className="mr-3 text-[#52b788]" />
+                    Add Telegram Session
+                  </h3>
+                  {authCode.sessionId ? (
+                    <form onSubmit={handleVerifySession} className="space-y-4">
+                      <div className="p-4 bg-[#1b4332]/20 border-2 border-[#1b4332] rounded-lg mb-4">
+                        <p className="text-[#d8f3dc] text-sm font-bold mb-1">Verification Required</p>
+                        <p className="text-[#95d5b2] text-[10px]">Enter the code sent to your Telegram app.</p>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-[#95d5b2] text-[10px] uppercase font-bold mb-2 tracking-widest">Auth Code</label>
+                          <div className="relative">
+                            <Key className="absolute left-3 top-3 text-[#52b788]" size={18} />
+                            <input 
+                              type="text" 
+                              value={authCode.code} 
+                              onChange={(e) => setAuthCode({ ...authCode, code: e.target.value })}
+                              className="w-full bg-black border-2 border-[#1b4332] rounded-lg py-3 pl-10 pr-4 text-[#d8f3dc] focus:border-[#52b788] outline-none transition-colors"
+                              placeholder="12345"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[#95d5b2] text-[10px] uppercase font-bold mb-2 tracking-widest">2FA Password (Optional)</label>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-3 text-[#52b788]" size={18} />
+                            <input 
+                              type="password" 
+                              value={authCode.password} 
+                              onChange={(e) => setAuthCode({ ...authCode, password: e.target.value })}
+                              className="w-full bg-black border-2 border-[#1b4332] rounded-lg py-3 pl-10 pr-4 text-[#d8f3dc] focus:border-[#52b788] outline-none transition-colors"
+                              placeholder="Your 2FA password"
+                            />
+                          </div>
+                        </div>
+                        <button 
+                          type="submit" 
+                          disabled={isLoading}
+                          className="w-full bg-[#52b788] hover:bg-[#74c69d] text-black font-bold py-4 rounded-lg transition-all border-4 border-[#95d5b2] shadow-[4px_4px_0px_0px_#95d5b2] active:translate-y-[2px] active:shadow-none flex items-center justify-center uppercase tracking-widest text-sm"
+                        >
+                          {isLoading ? <RefreshCw className="animate-spin mr-2" size={18} /> : <Play className="mr-2" size={18} />}
+                          Verify & Activate
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <form onSubmit={handleCreateSession} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[#95d5b2] text-[10px] uppercase font-bold mb-2 tracking-widest">Session Name</label>
+                          <input 
+                            type="text" 
+                            value={newSession.name} 
+                            onChange={(e) => setNewSession({ ...newSession, name: e.target.value })}
+                            className="w-full bg-black border-2 border-[#1b4332] rounded-lg p-3 text-[#d8f3dc] focus:border-[#52b788] outline-none transition-colors"
+                            placeholder="Main Account"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[#95d5b2] text-[10px] uppercase font-bold mb-2 tracking-widest">Phone Number</label>
+                          <div className="relative">
+                            <Phone className="absolute left-3 top-3 text-[#52b788]" size={18} />
+                            <input 
+                              type="text" 
+                              value={newSession.phoneNumber} 
+                              onChange={(e) => setNewSession({ ...newSession, phoneNumber: e.target.value })}
+                              className="w-full bg-black border-2 border-[#1b4332] rounded-lg py-3 pl-10 pr-4 text-[#d8f3dc] focus:border-[#52b788] outline-none transition-colors"
+                              placeholder="+1234567890"
+                              required
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[#95d5b2] text-[10px] uppercase font-bold mb-2 tracking-widest">API ID</label>
+                          <div className="relative">
+                            <Hash className="absolute left-3 top-3 text-[#52b788]" size={18} />
+                            <input 
+                              type="text" 
+                              value={newSession.apiId} 
+                              onChange={(e) => setNewSession({ ...newSession, apiId: e.target.value })}
+                              className="w-full bg-black border-2 border-[#1b4332] rounded-lg py-3 pl-10 pr-4 text-[#d8f3dc] focus:border-[#52b788] outline-none transition-colors"
+                              placeholder="123456"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[#95d5b2] text-[10px] uppercase font-bold mb-2 tracking-widest">API Hash</label>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-3 text-[#52b788]" size={18} />
+                            <input 
+                              type="text" 
+                              value={newSession.apiHash} 
+                              onChange={(e) => setNewSession({ ...newSession, apiHash: e.target.value })}
+                              className="w-full bg-black border-2 border-[#1b4332] rounded-lg py-3 pl-10 pr-4 text-[#d8f3dc] focus:border-[#52b788] outline-none transition-colors"
+                              placeholder="abcdef123456..."
+                              required
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <button 
+                        type="submit" 
+                        disabled={isLoading}
+                        className="w-full bg-[#52b788] hover:bg-[#74c69d] text-black font-bold py-4 rounded-lg transition-all border-4 border-[#95d5b2] shadow-[4px_4px_0px_0px_#95d5b2] active:translate-y-[2px] active:shadow-none flex items-center justify-center uppercase tracking-widest text-sm"
+                      >
+                        {isLoading ? <RefreshCw className="animate-spin mr-2" size={18} /> : <Plus className="mr-2" size={18} />}
+                        Create Session
+                      </button>
+                    </form>
+                  )}
+                </div>
+
+                {/* Twitter Account Creation */}
+                <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-8 shadow-lg shadow-black/80">
+                  <h3 className="text-xl font-bold text-[#d8f3dc] mb-6 flex items-center">
+                    <Twitter size={20} className="mr-3 text-[#52b788]" />
+                    Add Twitter Account
+                  </h3>
+                  <form onSubmit={handleCreateTwitterAccount} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-[#95d5b2] mb-1">Verification Code</label>
-                      <input type="text" value={authCode.code} onChange={e => setAuthCode({...authCode, code: e.target.value})} className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors" required />
+                      <label className="block text-[#95d5b2] text-[10px] uppercase font-bold mb-2 tracking-widest">Account Name</label>
+                      <input 
+                        type="text" 
+                        value={newTwitterAccount.name} 
+                        onChange={(e) => setNewTwitterAccount({ ...newTwitterAccount, name: e.target.value })}
+                        className="w-full bg-black border-2 border-[#1b4332] rounded-lg p-3 text-[#d8f3dc] focus:border-[#52b788] outline-none transition-colors"
+                        placeholder="@username or Label"
+                        required
+                      />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#95d5b2] mb-1">2FA Password (if any)</label>
-                      <input type="password" value={authCode.password} onChange={e => setAuthCode({...authCode, password: e.target.value})} className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[#95d5b2] text-[10px] uppercase font-bold mb-2 tracking-widest">Auth Token</label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 text-[#52b788]" size={18} />
+                          <input 
+                            type="password" 
+                            value={newTwitterAccount.authToken} 
+                            onChange={(e) => setNewTwitterAccount({ ...newTwitterAccount, authToken: e.target.value })}
+                            className="w-full bg-black border-2 border-[#1b4332] rounded-lg py-3 pl-10 pr-4 text-[#d8f3dc] focus:border-[#52b788] outline-none transition-colors"
+                            placeholder="auth_token cookie"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[#95d5b2] text-[10px] uppercase font-bold mb-2 tracking-widest">ct0 (CSRF Token)</label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 text-[#52b788]" size={18} />
+                          <input 
+                            type="password" 
+                            value={newTwitterAccount.ct0} 
+                            onChange={(e) => setNewTwitterAccount({ ...newTwitterAccount, ct0: e.target.value })}
+                            className="w-full bg-black border-2 border-[#1b4332] rounded-lg py-3 pl-10 pr-4 text-[#d8f3dc] focus:border-[#52b788] outline-none transition-colors"
+                            placeholder="ct0 cookie"
+                            required
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <button type="submit" className="bg-[#52b788] hover:bg-[#40916c] text-black px-6 py-2 rounded-lg font-bold transition-all border-4 border-[#95d5b2] shadow-[2px_2px_0px_0px_#95d5b2] active:translate-y-[2px] active:shadow-none">Verify & Connect</button>
+                    <button 
+                      type="submit" 
+                      disabled={isLoading}
+                      className="w-full bg-[#52b788] hover:bg-[#74c69d] text-black font-bold py-4 rounded-lg transition-all border-4 border-[#95d5b2] shadow-[4px_4px_0px_0px_#95d5b2] active:translate-y-[2px] active:shadow-none flex items-center justify-center uppercase tracking-widest text-sm"
+                    >
+                      {isLoading ? <RefreshCw className="animate-spin mr-2" size={18} /> : <Plus className="mr-2" size={18} />}
+                      Add Twitter Account
+                    </button>
                   </form>
-                ) : (
-                  <form onSubmit={handleCreateSession} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-[#95d5b2] mb-1">Session Name</label>
-                      <input type="text" value={newSession.name} onChange={e => setNewSession({...newSession, name: e.target.value})} className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors" placeholder="e.g. Main Account" required />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#95d5b2] mb-1">Phone Number</label>
-                      <input type="text" value={newSession.phoneNumber} onChange={e => setNewSession({...newSession, phoneNumber: e.target.value})} className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors" placeholder="+1234567890" required />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#95d5b2] mb-1">API ID</label>
-                      <input type="text" value={newSession.apiId} onChange={e => setNewSession({...newSession, apiId: e.target.value})} className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors" required />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#95d5b2] mb-1">API Hash</label>
-                      <input type="text" value={newSession.apiHash} onChange={e => setNewSession({...newSession, apiHash: e.target.value})} className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors" required />
-                    </div>
-                    <div className="md:col-span-2 mt-2">
-                      <button type="submit" className="bg-[#52b788] hover:bg-[#40916c] text-black px-6 py-2 rounded-lg font-bold transition-all border-4 border-[#95d5b2] shadow-[2px_2px_0px_0px_#95d5b2] active:translate-y-[2px] active:shadow-none">Request Code</button>
-                    </div>
-                  </form>
-                )}
+                </div>
               </div>
 
-              <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl overflow-x-auto shadow-lg shadow-black/80">
-                <table className="w-full text-left text-sm min-w-[600px]">
-                  <thead className="bg-black text-[#74c69d]">
-                    <tr>
-                      <th className="px-6 py-4 font-medium">Name</th>
-                      <th className="px-6 py-4 font-medium">Phone</th>
-                      <th className="px-6 py-4 font-medium">Status</th>
-                      <th className="px-6 py-4 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-black">
-                    {sessions.map(session => (
-                      <tr key={session.id} className="hover:bg-[#1b4332]/30">
-                        <td className="px-6 py-4 text-[#d8f3dc] font-medium">{session.name}</td>
-                        <td className="px-6 py-4 text-[#95d5b2]">{session.phone_number}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${session.status === 'active' ? 'bg-[#52b788]/20 text-[#52b788]' : 'bg-amber-950/30 text-amber-400/90'}`}>
-                            {session.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button 
-                            onClick={() => handleDeleteSession(session.id)} 
-                            className="text-rose-400/90 hover:text-rose-300 font-medium flex items-center space-x-1"
-                          >
-                            <X size={14} />
-                            <span>Delete</span>
-                          </button>
-                        </td>
+              {/* Active Sessions & Accounts List */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Telegram Sessions */}
+                <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl overflow-hidden shadow-lg shadow-black/80">
+                  <div className="bg-black/40 px-6 py-4 border-b-2 border-[#1b4332] flex justify-between items-center">
+                    <h3 className="font-bold text-[#d8f3dc] flex items-center">
+                      <MessageSquare size={16} className="mr-2 text-[#52b788]" />
+                      Active Telegram Sessions
+                    </h3>
+                    <span className="text-[10px] font-bold text-[#52b788] bg-[#52b788]/10 px-2 py-1 rounded border border-[#52b788]/30 uppercase tracking-widest">
+                      {sessions.length} Total
+                    </span>
+                  </div>
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-black text-[#74c69d] text-[10px] uppercase tracking-widest">
+                      <tr>
+                        <th className="px-6 py-3 font-bold">Name</th>
+                        <th className="px-6 py-3 font-bold">Phone</th>
+                        <th className="px-6 py-3 font-bold">Status</th>
+                        <th className="px-6 py-3 font-bold">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-[#1b4332]">
+                      {sessions.map(session => (
+                        <tr key={session.id} className="hover:bg-[#1b4332]/20 transition-colors">
+                          <td className="px-6 py-4 text-[#d8f3dc] font-medium">{session.name}</td>
+                          <td className="px-6 py-4 text-[#95d5b2] font-mono">{session.phone_number}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest border ${
+                              session.status === 'active' 
+                                ? 'bg-[#52b788]/20 text-[#52b788] border-[#52b788]/50' 
+                                : 'bg-amber-500/20 text-amber-400 border-amber-500/50'
+                            }`}>
+                              {session.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <button 
+                              onClick={() => handleDeleteSession(session.id)} 
+                              className="text-rose-400/90 hover:text-rose-300 font-medium flex items-center space-x-1"
+                            >
+                              <X size={14} />
+                              <span>Delete</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Twitter Accounts */}
+                <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl overflow-hidden shadow-lg shadow-black/80">
+                  <div className="bg-black/40 px-6 py-4 border-b-2 border-[#1b4332] flex justify-between items-center">
+                    <h3 className="font-bold text-[#d8f3dc] flex items-center">
+                      <Twitter size={16} className="mr-2 text-[#52b788]" />
+                      Active Twitter Accounts
+                    </h3>
+                    <span className="text-[10px] font-bold text-[#52b788] bg-[#52b788]/10 px-2 py-1 rounded border border-[#52b788]/30 uppercase tracking-widest">
+                      {twitterAccounts.length} Total
+                    </span>
+                  </div>
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-black text-[#74c69d] text-[10px] uppercase tracking-widest">
+                      <tr>
+                        <th className="px-6 py-3 font-bold">Name</th>
+                        <th className="px-6 py-3 font-bold">Status</th>
+                        <th className="px-6 py-3 font-bold">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#1b4332]">
+                      {twitterAccounts.map(account => (
+                        <tr key={account.id} className="hover:bg-[#1b4332]/20 transition-colors">
+                          <td className="px-6 py-4 text-[#d8f3dc] font-medium">{account.name}</td>
+                          <td className="px-6 py-4">
+                            <span className="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest border bg-[#52b788]/20 text-[#52b788] border-[#52b788]/50">
+                              {account.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <button 
+                              onClick={() => handleDeleteTwitterAccount(account.id)} 
+                              className="text-rose-400/90 hover:text-rose-300 font-medium flex items-center space-x-1"
+                            >
+                              <X size={14} />
+                              <span>Delete</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -946,8 +1213,10 @@ export default function App() {
                           onChange={e => setTwitterConfig({...twitterConfig, account: e.target.value})}
                           className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors"
                         >
-                          <option value="Account 1">Account 1 (Main)</option>
-                          <option value="Account 2">Account 2 (Alt)</option>
+                          <option value="">Select Account...</option>
+                          {twitterAccounts.map(a => (
+                            <option key={a.id} value={a.name}>{a.name}</option>
+                          ))}
                         </select>
                       </div>
                       <div>
@@ -991,8 +1260,8 @@ export default function App() {
                       )}
                       <button 
                         onClick={handleTwitterAction}
-                        disabled={activeActions.twitter || (twitterStatus && twitterStatus[twitterConfig.action]?.isHit)}
-                        className={`w-full bg-[#52b788] hover:bg-[#40916c] text-black font-bold py-3 px-4 rounded-lg transition-all border-4 border-[#95d5b2] shadow-[4px_4px_0px_0px_#95d5b2] active:translate-y-[2px] active:shadow-none mt-4 flex items-center justify-center ${activeActions.twitter || (twitterStatus && twitterStatus[twitterConfig.action]?.isHit) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!twitterConfig.account || activeActions.twitter || (twitterStatus && twitterStatus[twitterConfig.action]?.isHit)}
+                        className={`w-full bg-[#52b788] hover:bg-[#40916c] text-black font-bold py-3 px-4 rounded-lg transition-all border-4 border-[#95d5b2] shadow-[4px_4px_0px_0px_#95d5b2] active:translate-y-[2px] active:shadow-none mt-4 flex items-center justify-center ${!twitterConfig.account || activeActions.twitter || (twitterStatus && twitterStatus[twitterConfig.action]?.isHit) ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         {activeActions.twitter ? (
                           <>
@@ -1002,7 +1271,7 @@ export default function App() {
                         ) : (
                           <>
                             <Twitter size={18} className="mr-2" />
-                            {twitterStatus && twitterStatus[twitterConfig.action]?.isHit ? 'Rate Limit Hit' : 'Execute Twitter Action'}
+                            {!twitterConfig.account ? 'Select Account First' : (twitterStatus && twitterStatus[twitterConfig.action]?.isHit ? 'Rate Limit Hit' : 'Execute Twitter Action')}
                           </>
                         )}
                       </button>
@@ -1017,7 +1286,12 @@ export default function App() {
                       Rate Limits
                     </h3>
                     <div className="space-y-4">
-                      {twitterStatus && Object.entries(twitterStatus).map(([action, status]: [string, any]) => (
+                      {!twitterConfig.account ? (
+                        <div className="text-center py-8 border-2 border-dashed border-[#1b4332] rounded-lg">
+                          <Twitter size={32} className="mx-auto mb-2 text-[#1b4332]" />
+                          <p className="text-[10px] uppercase tracking-widest text-[#95d5b2]">Select an account to view limits</p>
+                        </div>
+                      ) : twitterStatus ? Object.entries(twitterStatus).map(([action, status]: [string, any]) => (
                         <div key={action} className="p-3 bg-black border-2 border-[#1b4332] rounded-lg">
                           <div className="flex justify-between items-center mb-2">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-[#95d5b2]">{action}</span>
@@ -1044,8 +1318,7 @@ export default function App() {
                             )}
                           </div>
                         </div>
-                      ))}
-                      {!twitterStatus && (
+                      )) : (
                         <div className="text-center py-4 text-[#1b4332]">
                           <RefreshCw size={24} className="mx-auto mb-2 animate-spin" />
                           <p className="text-[10px] uppercase tracking-widest">Loading Status...</p>

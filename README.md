@@ -1,20 +1,41 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# AutoPROMO agent
 
-# Run and deploy your AI Studio app
+Headless automation suite for Telegram and Twitter.
 
-This contains everything you need to run your app locally.
+## Features
+- Auto-DM
+- Auto-React
+- Auto-Join
+- Scraper
+- Keyword Listener
 
-View your app in AI Studio: https://ai.studio/apps/ec62b8da-f391-42a2-a891-2bff87444da1
+## How to Build the Windows Installer (.exe)
 
-## Run Locally
+Since this environment is sandboxed, you need to build the `.exe` on your local Windows machine.
 
-**Prerequisites:**  Node.js
+1.  **Export the Project:**
+    -   Go to the **Settings** menu in AI Studio.
+    -   Select **Export to ZIP**.
+    -   Extract the ZIP file on your local machine.
 
+2.  **Install Dependencies:**
+    -   Open a terminal (PowerShell or Command Prompt) in the project folder.
+    -   Run: `npm install`
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+3.  **Build the Installer:**
+    -   Run: `npm run electron:build`
+    -   This will create a `release` folder containing the `AutoPROMO agent Setup.exe` installer.
+
+4.  **Install and Run:**
+    -   Run the generated `.exe` to install the application on your Windows 10 or 11 machine.
+
+## Development Mode
+
+To run the application in development mode with Electron:
+- Run: `npm run electron:dev`
+
+## PWA Installation
+
+You can also install this application directly from your browser as a Progressive Web App (PWA):
+- Open the application in Chrome or Edge.
+- Click the "Install App" button in the **App Settings** tab or the browser's address bar.

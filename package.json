@@ -1,15 +1,42 @@
 {
   "name": "react-example",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "main": "electron-main.js",
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build",
+    "build:server": "esbuild server.ts --bundle --platform=node --format=esm --outfile=server.js --external:sqlite3 --external:telegram --external:express --external:cors --external:vite",
+    "build:electron": "esbuild electron-main.ts --bundle --platform=node --format=esm --outfile=electron-main.js --external:electron --external:electron-is-dev",
     "preview": "vite preview",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist release server.js electron-main.js",
     "lint": "tsc --noEmit",
-    "start": "tsx server.ts"
+    "start": "tsx server.ts",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:build": "npm run build && npm run build:server && npm run build:electron && electron-builder"
+  },
+  "build": {
+    "appId": "com.autopromo.agent",
+    "productName": "AutoPROMO agent",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron-main.js",
+      "server.js",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
@@ -35,9 +62,15 @@
     "@types/node": "^22.14.0",
     "@types/sqlite3": "^3.1.11",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.1",
+    "electron": "^41.1.1",
+    "electron-builder": "^26.8.1",
+    "electron-is-dev": "^3.0.1",
+    "esbuild": "^0.27.5",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "wait-on": "^9.0.4"
   }
 }

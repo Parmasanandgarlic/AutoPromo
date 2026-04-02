@@ -51,7 +51,9 @@ interface DBSchema {
 }
 
 class DB {
-  private dbPath = path.join(process.cwd(), 'agent_db.json');
+  private dbPath = process.env.USER_DATA_PATH 
+    ? path.join(process.env.USER_DATA_PATH, 'agent_db.json')
+    : path.join(process.cwd(), 'agent_db.json');
   private data: DBSchema = {
     sessions: [],
     keywords: [],

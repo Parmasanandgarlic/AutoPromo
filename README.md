@@ -11,7 +11,7 @@ Headless automation suite for Telegram and Twitter.
 
 ## How to Build the Windows Installer (.exe)
 
-I have simplified the build process to a single command.
+I have created a **"One-Click"** builder script for Windows.
 
 1.  **Export the Project:**
     -   Go to the **Settings** menu in AI Studio.
@@ -19,13 +19,9 @@ I have simplified the build process to a single command.
     -   Extract the ZIP file on your local machine.
 
 2.  **One-Click Build:**
-    -   Open a terminal (PowerShell or Command Prompt) in the project folder.
-    -   Run: `npm run build:all`
-    -   This will automatically:
-        -   Install all dependencies.
-        -   Rebuild native modules (like SQLite) for Windows.
-        -   Compile the backend and frontend.
-        -   Generate the installer.
+    -   Find the file named **`build_installer.bat`** in the project folder.
+    -   **Double-click it.**
+    -   The script will automatically install everything, rebuild the database engine for Windows, and generate your installer.
 
 3.  **Find Your Files:**
     -   Check the `release` folder. You will find:

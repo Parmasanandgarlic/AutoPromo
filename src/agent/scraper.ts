@@ -10,7 +10,19 @@ class Scraper {
     db.addLog('system', `Starting scrape for group ${groupId}`);
 
     try {
-      const entity = await client.getInputEntity(groupId);
+      let entity;
+      try {
+        entity = await client.getInputEntity(groupId);
+      } catch (entityError) {
+        // Try to join if not found or not in group
+        db.addLog('system', `Joining group ${groupId} before scraping...`);
+        entity = await client.invoke(new Api.channels.JoinChannel({
+          channel: groupId as any
+        }));
+        // Re-fetch entity after joining
+        entity = await client.getInputEntity(groupId);
+      }
+
       const participants = await client.invoke(
         new Api.channels.GetParticipants({
           channel: entity as any,
@@ -47,6 +59,8 @@ class Scraper {
           }
         }
         db.addLog('system', `Scraped ${count} active users from ${groupId}`);
+      } else {
+        db.addLog('system', `No new participants found in ${groupId}`);
       }
     } catch (e: any) {
       db.addLog('error', `Failed to scrape group ${groupId}: ${e.message}`);

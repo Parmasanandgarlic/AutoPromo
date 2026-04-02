@@ -2,6 +2,8 @@
   "name": "react-example",
   "private": true,
   "version": "1.0.0",
+  "description": "AutoPROMO Agent - Advanced Automation Suite",
+  "author": "AutoPROMO Team",
   "type": "module",
   "main": "electron-main.js",
   "scripts": {
@@ -32,10 +34,19 @@
     ],
     "win": {
       "target": [
-        "nsis",
-        "portable"
-      ],
-      "icon": "public/icon.png"
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,

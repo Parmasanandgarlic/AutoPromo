@@ -16,16 +16,34 @@ pause
 echo.
 echo [1/3] Installing dependencies...
 call npm install --no-optional --no-rebuild
+if %errorlevel% neq 0 (
+    echo.
+    echo ERROR: Failed to install dependencies.
+    pause
+    exit /b %errorlevel%
+)
 
 echo.
 echo [2/3] Compiling Backend and Frontend...
 call npm run build
+if %errorlevel% neq 0 (
+    echo.
+    echo ERROR: Frontend build failed.
+    pause
+    exit /b %errorlevel%
+)
 call npm run build:server
 call npm run build:electron
 
 echo.
 echo [3/3] Generating Windows Installer (.exe)...
 call npx electron-builder --win --x64
+if %errorlevel% neq 0 (
+    echo.
+    echo ERROR: Electron build failed. Check the errors above.
+    pause
+    exit /b %errorlevel%
+)
 
 echo.
 echo ============================================================

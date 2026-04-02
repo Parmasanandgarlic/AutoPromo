@@ -32,7 +32,11 @@ class Operator {
     while (this.isRunning) {
       if (this.sentToday >= this.maxPerDay) {
         db.addLog('system', `Daily limit reached (${this.maxPerDay}). Sleeping for 24 hours.`);
-        await this.sleep(24 * 60 * 60 * 1000); // Sleep 24 hours
+        // Interruptible sleep
+        for (let i = 0; i < 24 * 60; i++) {
+          if (!this.isRunning) break;
+          await this.sleep(60 * 1000); // Check every minute
+        }
         this.sentToday = 0;
         continue;
       }
@@ -46,7 +50,11 @@ class Operator {
       const users = await db.getUncontactedUsers(1);
       if (!users || users.length === 0) {
         db.addLog('system', `No uncontacted users found. Sleeping for 1 hour.`);
-        await this.sleep(60 * 60 * 1000);
+        // Interruptible sleep
+        for (let i = 0; i < 60; i++) {
+          if (!this.isRunning) break;
+          await this.sleep(60 * 1000);
+        }
         continue;
       }
 
@@ -55,9 +63,14 @@ class Operator {
 
       try {
         // Human-like delay before sending (200-600 seconds)
-        const delay = Math.floor(Math.random() * (600 - 200 + 1) + 200) * 1000;
-        db.addLog('system', `Waiting ${delay / 1000}s before messaging ${user.username || user.user_id}`);
-        await this.sleep(delay);
+        const delaySeconds = Math.floor(Math.random() * (600 - 200 + 1) + 200);
+        db.addLog('system', `Waiting ${delaySeconds}s before messaging ${user.username || user.user_id}`);
+        
+        // Interruptible delay
+        for (let i = 0; i < delaySeconds; i++) {
+          if (!this.isRunning) break;
+          await this.sleep(1000);
+        }
 
         if (!this.isRunning) break;
 

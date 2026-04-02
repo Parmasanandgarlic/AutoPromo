@@ -65,12 +65,23 @@ class DB {
   async init() {
     try {
       const fileData = await fs.readFile(this.dbPath, 'utf-8');
+      if (!fileData.trim()) {
+        await this.save();
+        return;
+      }
       this.data = JSON.parse(fileData);
     } catch (e: any) {
       if (e.code === 'ENOENT') {
         await this.save();
       } else {
         console.error('Failed to load DB:', e);
+        // If corrupted, backup and reset
+        try {
+          await fs.rename(this.dbPath, `${this.dbPath}.bak`);
+          await this.save();
+        } catch (renameError) {
+          console.error('Failed to backup corrupted DB:', renameError);
+        }
       }
     }
   }
@@ -168,7 +179,14 @@ class DB {
   }
 
   async addScrapedUser(userId: string, username: string | null, lastSeen: Date | null, sourceGroup: string) {
-    if (!this.data.scraped_users.find(u => u.user_id === userId)) {
+    const existingIndex = this.data.scraped_users.findIndex(u => u.user_id === userId);
+    if (existingIndex !== -1) {
+      // Update existing user info
+      const user = this.data.scraped_users[existingIndex];
+      user.username = username || user.username;
+      user.last_seen = lastSeen ? lastSeen.toISOString() : user.last_seen;
+      user.source_group = sourceGroup;
+    } else {
       this.data.scraped_users.push({
         id: this.generateId(this.data.scraped_users),
         user_id: userId,
@@ -179,8 +197,8 @@ class DB {
         contacted_at: null,
         created_at: new Date().toISOString()
       });
-      await this.save();
     }
+    await this.save();
   }
 
   async markUserContacted(userId: string) {

@@ -3,6 +3,7 @@
 
 @theme {
   --font-handwriting: "Indie Flower", cursive;
+  --animate-spin-slow: spin 3s linear infinite;
 }
 
 @layer utilities {

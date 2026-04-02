@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Users, MessageSquare, Settings, Play, Square, Database, Key, Hash, Phone, Minus, Maximize2, X, Twitter, HelpCircle } from 'lucide-react';
+import { Activity, Users, MessageSquare, Settings, Play, Square, Database, Key, Hash, Phone, Minus, Maximize2, X, Twitter, HelpCircle, TreePine, TreeDeciduous, Trees, Palmtree, Leaf, Sprout, Flower, Flower2, Squirrel, Rabbit, Bird, Cat, Dog, Fish, Snail, PawPrint, Bug, Clover, Sun, Cloud, Moon, Star, Zap, Flame, Droplets, Wind, Shell } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -276,16 +276,44 @@ export default function App() {
             <Maximize2 size={8} className="text-black opacity-0 group-hover:opacity-100" />
           </button>
         </div>
-        <div className="text-xs font-medium text-[#95d5b2] tracking-wider uppercase">AutoPROMO agent</div>
-        <div className="w-16"></div> {/* Spacer for centering */}
+        <div className="flex-1 flex items-center justify-center space-x-3 px-8 overflow-hidden text-[#95d5b2] opacity-80">
+          <TreePine size={14} />
+          <Bug size={14} />
+          <Flower size={14} />
+          <Squirrel size={14} />
+          <Leaf size={14} />
+          <Clover size={14} />
+          <TreeDeciduous size={14} />
+          <Flower2 size={14} />
+          <Rabbit size={14} />
+          <Sprout size={14} />
+          <Bird size={14} />
+          <Trees size={14} />
+          <Cat size={14} />
+          <Palmtree size={14} />
+          <Dog size={14} />
+          <Fish size={14} />
+          <Snail size={14} />
+          <PawPrint size={14} />
+          <Sun size={14} />
+          <Cloud size={14} />
+          <Moon size={14} />
+          <Star size={14} />
+          <Zap size={14} />
+          <Flame size={14} />
+          <Droplets size={14} />
+          <Wind size={14} />
+          <Shell size={14} />
+          <Clover size={14} />
+          <Flower size={14} />
+          <Bug size={14} />
+        </div>
+        <div className="no-drag shrink-0">
+          <span className="font-['Indie_Flower'] text-sm text-[#95d5b2] opacity-60">I made this =)</span>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Fun "I made this" text */}
-        <div className="absolute top-2 right-4 z-10 opacity-40 pointer-events-none select-none">
-          <span className="font-['Indie_Flower'] text-lg text-[#d8f3dc]">I made this =)</span>
-        </div>
-
         {/* Toast Notifications */}
         <div className="absolute top-12 right-4 z-50 flex flex-col gap-2 no-drag">
           {toasts.map(toast => (

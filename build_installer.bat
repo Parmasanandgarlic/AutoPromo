@@ -1,5 +1,6 @@
 @echo off
 setlocal
+set npm_config_build_from_source=false
 echo ============================================================
 echo   AutoPROMO Agent - Windows Installer Builder
 echo ============================================================
@@ -13,21 +14,17 @@ echo.
 pause
 
 echo.
-echo [1/4] Installing dependencies...
-call npm install
+echo [1/3] Installing dependencies...
+call npm install --no-optional --no-rebuild
 
 echo.
-echo [2/4] Rebuilding native modules for Windows...
-call npx electron-rebuild
-
-echo.
-echo [3/4] Compiling Backend and Frontend...
+echo [2/3] Compiling Backend and Frontend...
 call npm run build
 call npm run build:server
 call npm run build:electron
 
 echo.
-echo [4/4] Generating Windows Installer (.exe)...
+echo [3/3] Generating Windows Installer (.exe)...
 call npx electron-builder --win --x64
 
 echo.

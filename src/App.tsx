@@ -3,6 +3,32 @@ import { Activity, Users, MessageSquare, Settings, Play, Square, Database, Key, 
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    });
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    } else {
+      addToast('App is already installed or your browser does not support installation.', 'success');
+    }
+  };
+
+  const handleDownloadWindows = () => {
+    // In this environment, we can't directly trigger a build and download of an .exe
+    // but we can explain how to export it or provide a link to the export feature.
+    addToast('To use this as a Windows app, click "Install App" below or use the "Export to ZIP" option in the AI Studio settings menu.', 'success');
+  };
   const [logs, setLogs] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [keywords, setKeywords] = useState<any[]>([]);
@@ -250,7 +276,7 @@ export default function App() {
             <Maximize2 size={8} className="text-black opacity-0 group-hover:opacity-100" />
           </button>
         </div>
-        <div className="text-xs font-medium text-[#95d5b2] tracking-wider uppercase">FarmDash Agent</div>
+        <div className="text-xs font-medium text-[#95d5b2] tracking-wider uppercase">AutoPROMO agent</div>
         <div className="w-16"></div> {/* Spacer for centering */}
       </div>
 
@@ -271,7 +297,7 @@ export default function App() {
         <div className="w-64 bg-[#06140f] border-r-4 border-[#95d5b2] flex flex-col shrink-0">
           <div className="p-6">
             <h1 className="text-2xl font-bold text-[#d8f3dc] tracking-tight">
-              FT-Agent
+              AutoPROMO
             </h1>
             <p className="text-xs text-[#74c69d] mt-1 font-medium">Automation Suite</p>
           </div>
@@ -304,6 +330,10 @@ export default function App() {
             <button onClick={() => setActiveTab('twitter')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'twitter' ? 'bg-[#1b4332] text-[#d8f3dc]' : 'text-[#95d5b2] hover:bg-[#1b4332]/50 hover:text-[#d8f3dc]'}`}>
               <Twitter size={18} />
               <span className="font-medium">Twitter (X) Auto</span>
+            </button>
+            <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-[#1b4332] text-[#d8f3dc]' : 'text-[#95d5b2] hover:bg-[#1b4332]/50 hover:text-[#d8f3dc]'}`}>
+              <Settings size={18} />
+              <span className="font-medium">App Settings</span>
             </button>
           </nav>
         </div>
@@ -645,7 +675,7 @@ export default function App() {
           {activeTab === 'twitter' && (
             <div className="space-y-6 max-w-4xl mx-auto">
               <h2 className="text-2xl font-bold text-[#d8f3dc]">Twitter (X) Automation</h2>
-              <p className="text-[#95d5b2] mb-6">TWBoostBot-style mass engagement tools for X.</p>
+              <p className="text-[#95d5b2] mb-6">AutoPROMO-style mass engagement tools for X.</p>
               
               <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-6 shadow-lg shadow-black/80">
                 <h3 className="text-lg font-medium text-[#d8f3dc] mb-4">Run Twitter Action</h3>
@@ -686,21 +716,83 @@ export default function App() {
                   </div>
                   {twitterConfig.action === 'reply' && (
                     <div>
-                      <label className="block text-xs font-medium text-[#95d5b2] mb-1">Reply Content</label>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs font-medium text-[#95d5b2]">Reply Content</label>
+                        <span className={`text-[10px] font-bold ${twitterConfig.content.length > 280 ? 'text-rose-400' : 'text-[#95d5b2]'}`}>
+                          {twitterConfig.content.length} / 280
+                        </span>
+                      </div>
                       <textarea 
                         value={twitterConfig.content} 
                         onChange={e => setTwitterConfig({...twitterConfig, content: e.target.value})}
-                        className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] h-24 transition-colors"
+                        className={`w-full bg-black border-4 rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none h-24 transition-colors ${twitterConfig.content.length > 280 ? 'border-rose-400' : 'border-[#95d5b2] focus:border-[#52b788]'}`}
                         placeholder="Type your reply here..."
                       />
                     </div>
                   )}
                   <button 
                     onClick={handleTwitterAction}
-                    className="w-full bg-[#1da1f2] hover:bg-[#1a91da] text-white font-bold py-2 px-4 rounded-lg transition-colors mt-4"
+                    className="w-full bg-[#52b788] hover:bg-[#40916c] text-black font-bold py-3 px-4 rounded-lg transition-all border-4 border-[#95d5b2] shadow-[4px_4px_0px_0px_#95d5b2] active:translate-y-[2px] active:shadow-none mt-4"
                   >
                     Execute Twitter Action
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'settings' && (
+            <div className="space-y-6 max-w-4xl mx-auto">
+              <h2 className="text-2xl font-bold text-[#d8f3dc]">Application Settings</h2>
+              <p className="text-[#95d5b2] mb-6">Manage your desktop app experience and installation.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-6 shadow-lg shadow-black/80">
+                  <h3 className="text-lg font-bold text-[#d8f3dc] mb-4 flex items-center">
+                    <Maximize2 size={18} className="mr-2 text-[#52b788]" /> Desktop App
+                  </h3>
+                  <p className="text-sm text-[#95d5b2] mb-6">
+                    Install this application as a standalone desktop app on your Windows system for a more native experience.
+                  </p>
+                  <button 
+                    onClick={handleInstallClick}
+                    className="w-full bg-[#52b788] hover:bg-[#40916c] text-black font-bold py-3 px-4 rounded-lg transition-all border-4 border-[#95d5b2] shadow-[4px_4px_0px_0px_#95d5b2] active:translate-y-[2px] active:shadow-none"
+                  >
+                    Install Desktop App
+                  </button>
+                </div>
+
+                <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-6 shadow-lg shadow-black/80">
+                  <h3 className="text-lg font-bold text-[#d8f3dc] mb-4 flex items-center">
+                    <X size={18} className="mr-2 text-rose-400" /> Windows Download
+                  </h3>
+                  <p className="text-sm text-[#95d5b2] mb-6">
+                    Download the source code to run locally on your Windows machine or export it to a ZIP file.
+                  </p>
+                  <button 
+                    onClick={handleDownloadWindows}
+                    className="w-full bg-black hover:bg-[#1b4332]/30 text-[#d8f3dc] font-bold py-3 px-4 rounded-lg transition-all border-4 border-[#95d5b2] shadow-[4px_4px_0px_0px_#95d5b2] active:translate-y-[2px] active:shadow-none"
+                  >
+                    Download for Windows
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-6 shadow-lg shadow-black/80">
+                <h3 className="text-lg font-bold text-[#d8f3dc] mb-4">App Information</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between border-b-4 border-black pb-2">
+                    <span className="text-[#95d5b2]">Version</span>
+                    <span className="text-[#d8f3dc] font-mono">1.0.0-stable</span>
+                  </div>
+                  <div className="flex justify-between border-b-4 border-black pb-2">
+                    <span className="text-[#95d5b2]">Build Date</span>
+                    <span className="text-[#d8f3dc] font-mono">April 2026</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#95d5b2]">Platform</span>
+                    <span className="text-[#d8f3dc] font-mono">Windows / Web (PWA)</span>
+                  </div>
                 </div>
               </div>
             </div>

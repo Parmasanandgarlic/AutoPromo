@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "FT-Agent Automation Suite",
+  "name": "AutoPROMO agent",
   "version": "1.0.0",
   "description": "Headless automation suite. Features: Auto-DM, Auto-React, Auto-Join, Scraper, and Keyword Listener.",
   "action": {
     "default_popup": "index.html",
-    "default_title": "Open FT-Agent"
+    "default_title": "Open AutoPROMO"
   },
   "icons": {
     "128": "icon.png"

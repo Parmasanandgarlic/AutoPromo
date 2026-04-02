@@ -1,0 +1,58 @@
+import { sessionManager } from "./sessionManager.js";
+import { db } from "./db.js";
+import { Api } from "telegram";
+
+class Scraper {
+  async scrapeGroup(sessionId: number, groupId: string) {
+    const client = sessionManager.getClient(sessionId);
+    if (!client) throw new Error("Client not connected");
+
+    db.addLog('system', `Starting scrape for group ${groupId}`);
+
+    try {
+      const entity = await client.getInputEntity(groupId);
+      const participants = await client.invoke(
+        new Api.channels.GetParticipants({
+          channel: entity as any,
+          filter: new Api.ChannelParticipantsRecent(),
+          offset: 0,
+          limit: 200,
+          hash: 0 as any,
+        })
+      );
+
+      if (participants instanceof Api.channels.ChannelParticipants) {
+        let count = 0;
+        for (const user of participants.users) {
+          if (user instanceof Api.User && !user.bot && !user.deleted) {
+            let lastSeen = null;
+            if (user.status instanceof Api.UserStatusRecently) {
+               lastSeen = new Date();
+            } else if (user.status instanceof Api.UserStatusOnline) {
+               lastSeen = new Date();
+            } else if (user.status instanceof Api.UserStatusOffline) {
+               lastSeen = new Date(user.status.wasOnline * 1000);
+            }
+
+            // Only add if recently active (e.g. within last 7 days)
+            if (lastSeen && (new Date().getTime() - lastSeen.getTime()) < 7 * 24 * 60 * 60 * 1000) {
+              await db.addScrapedUser(
+                user.id.toString(),
+                user.username || null,
+                lastSeen,
+                groupId
+              );
+              count++;
+            }
+          }
+        }
+        db.addLog('system', `Scraped ${count} active users from ${groupId}`);
+      }
+    } catch (e: any) {
+      db.addLog('error', `Failed to scrape group ${groupId}: ${e.message}`);
+      throw e;
+    }
+  }
+}
+
+export const scraper = new Scraper();

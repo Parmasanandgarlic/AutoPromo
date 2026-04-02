@@ -281,8 +281,13 @@ export default function App() {
       </div>
 
       <div className="flex flex-1 overflow-hidden relative">
+        {/* Fun "I made this" text */}
+        <div className="absolute top-2 right-4 z-10 opacity-40 pointer-events-none select-none">
+          <span className="font-['Indie_Flower'] text-lg text-[#d8f3dc]">I made this =)</span>
+        </div>
+
         {/* Toast Notifications */}
-        <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 no-drag">
+        <div className="absolute top-12 right-4 z-50 flex flex-col gap-2 no-drag">
           {toasts.map(toast => (
             <div key={toast.id} className={`px-4 py-3 rounded-lg shadow-[4px_4px_0px_0px_#95d5b2] border-4 flex items-center gap-3 transition-all ${toast.type === 'error' ? 'bg-rose-950/80 border-[#95d5b2] text-rose-400' : 'bg-[#06140f] border-[#95d5b2] text-[#52b788]'}`}>
               <div className="text-sm font-medium">{toast.message}</div>

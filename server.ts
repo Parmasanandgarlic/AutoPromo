@@ -196,6 +196,16 @@ async function startServer() {
     }
   });
 
+  app.get("/api/twitter/status/:account", async (req, res) => {
+    const { account } = req.params;
+    try {
+      const status = twitterAutomation.getAccountStatus(account);
+      res.json(status);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

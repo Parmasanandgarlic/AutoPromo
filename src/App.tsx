@@ -42,6 +42,7 @@ export default function App() {
   const [groups, setGroups] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [toasts, setToasts] = useState<{id: number, message: string, type: 'success' | 'error'}[]>([]);
+  const [twitterStatus, setTwitterStatus] = useState<any>(null);
 
   const addToast = (message: string, type: 'success' | 'error' = 'success') => {
     const id = Date.now();
@@ -90,18 +91,20 @@ export default function App() {
 
   const fetchData = async () => {
     try {
-      const [logsRes, sessionsRes, keywordsRes, groupsRes, usersRes] = await Promise.all([
+      const [logsRes, sessionsRes, keywordsRes, groupsRes, usersRes, twitterRes] = await Promise.all([
         fetch('/api/logs').then(r => r.json()),
         fetch('/api/sessions').then(r => r.json()),
         fetch('/api/keywords').then(r => r.json()),
         fetch('/api/groups').then(r => r.json()),
-        fetch('/api/users').then(r => r.json())
+        fetch('/api/users').then(r => r.json()),
+        fetch(`/api/twitter/status/${twitterConfig.account}`).then(r => r.json())
       ]);
       setLogs(Array.isArray(logsRes) ? logsRes : []);
       setSessions(Array.isArray(sessionsRes) ? sessionsRes : []);
       setKeywords(Array.isArray(keywordsRes) ? keywordsRes : []);
       setGroups(Array.isArray(groupsRes) ? groupsRes : []);
       setUsers(Array.isArray(usersRes) ? usersRes : []);
+      setTwitterStatus(twitterRes);
     } catch (e) {
       console.error("Failed to fetch data", e);
     }
@@ -350,6 +353,7 @@ export default function App() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to execute Twitter action');
       addToast(data.message || `Successfully executed ${twitterConfig.action}`, 'success');
+      fetchData(); // Refresh status
     } catch (err: any) {
       addToast(err.message, 'error');
     } finally {
@@ -919,79 +923,146 @@ export default function App() {
 
           {activeTab === 'twitter' && (
             <div className="space-y-6 max-w-4xl mx-auto">
-              <h2 className="text-2xl font-bold text-[#d8f3dc]">Twitter (X) Automation</h2>
-              <p className="text-[#95d5b2] mb-6">AutoPROMO-style mass engagement tools for X.</p>
+              <div className="flex justify-between items-end">
+                <div>
+                  <h2 className="text-2xl font-bold text-[#d8f3dc]">Twitter (X) Automation</h2>
+                  <p className="text-[#95d5b2]">AutoPROMO-style mass engagement tools for X.</p>
+                </div>
+                <div className="flex items-center space-x-2 bg-black/40 border border-[#1b4332] rounded-lg px-3 py-1.5">
+                  <div className={`w-2 h-2 rounded-full animate-pulse ${activeActions.twitter ? 'bg-[#52b788]' : 'bg-[#1b4332]'}`} />
+                  <span className="text-[10px] font-bold text-[#95d5b2] uppercase tracking-widest">System Ready</span>
+                </div>
+              </div>
               
-              <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-6 shadow-lg shadow-black/80">
-                <h3 className="text-lg font-medium text-[#d8f3dc] mb-4">Run Twitter Action</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-[#95d5b2] mb-1">Select Account</label>
-                    <select 
-                      value={twitterConfig.account} 
-                      onChange={e => setTwitterConfig({...twitterConfig, account: e.target.value})}
-                      className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors"
-                    >
-                      <option value="Account 1">Account 1 (Main)</option>
-                      <option value="Account 2">Account 2 (Alt)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-[#95d5b2] mb-1">Target (Tweet URL or @username)</label>
-                    <input 
-                      type="text" 
-                      value={twitterConfig.target} 
-                      onChange={e => setTwitterConfig({...twitterConfig, target: e.target.value})}
-                      className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors"
-                      placeholder="https://x.com/... or @username"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-[#95d5b2] mb-1">Action</label>
-                    <select 
-                      value={twitterConfig.action} 
-                      onChange={e => setTwitterConfig({...twitterConfig, action: e.target.value})}
-                      className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors"
-                    >
-                      <option value="like">Auto-Like</option>
-                      <option value="retweet">Auto-Retweet</option>
-                      <option value="follow">Auto-Follow</option>
-                      <option value="reply">Auto-Reply</option>
-                    </select>
-                  </div>
-                  {twitterConfig.action === 'reply' && (
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <label className="block text-xs font-medium text-[#95d5b2]">Reply Content</label>
-                        <span className={`text-[10px] font-bold ${twitterConfig.content.length > 280 ? 'text-rose-400' : 'text-[#95d5b2]'}`}>
-                          {twitterConfig.content.length} / 280
-                        </span>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-6 shadow-lg shadow-black/80">
+                    <h3 className="text-lg font-medium text-[#d8f3dc] mb-4">Run Twitter Action</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-medium text-[#95d5b2] mb-1">Select Account</label>
+                        <select 
+                          value={twitterConfig.account} 
+                          onChange={e => setTwitterConfig({...twitterConfig, account: e.target.value})}
+                          className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors"
+                        >
+                          <option value="Account 1">Account 1 (Main)</option>
+                          <option value="Account 2">Account 2 (Alt)</option>
+                        </select>
                       </div>
-                      <textarea 
-                        value={twitterConfig.content} 
-                        onChange={e => setTwitterConfig({...twitterConfig, content: e.target.value})}
-                        className={`w-full bg-black border-4 rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none h-24 transition-colors ${twitterConfig.content.length > 280 ? 'border-rose-400' : 'border-[#95d5b2] focus:border-[#52b788]'}`}
-                        placeholder="Type your reply here..."
-                      />
+                      <div>
+                        <label className="block text-xs font-medium text-[#95d5b2] mb-1">Target (Tweet URL or @username)</label>
+                        <input 
+                          type="text" 
+                          value={twitterConfig.target} 
+                          onChange={e => setTwitterConfig({...twitterConfig, target: e.target.value})}
+                          className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors"
+                          placeholder="https://x.com/... or @username"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-[#95d5b2] mb-1">Action</label>
+                        <select 
+                          value={twitterConfig.action} 
+                          onChange={e => setTwitterConfig({...twitterConfig, action: e.target.value})}
+                          className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors"
+                        >
+                          <option value="like">Auto-Like</option>
+                          <option value="retweet">Auto-Retweet</option>
+                          <option value="follow">Auto-Follow</option>
+                          <option value="reply">Auto-Reply</option>
+                        </select>
+                      </div>
+                      {twitterConfig.action === 'reply' && (
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <label className="block text-xs font-medium text-[#95d5b2]">Reply Content</label>
+                            <span className={`text-[10px] font-bold ${twitterConfig.content.length > 280 ? 'text-rose-400' : 'text-[#95d5b2]'}`}>
+                              {twitterConfig.content.length} / 280
+                            </span>
+                          </div>
+                          <textarea 
+                            value={twitterConfig.content} 
+                            onChange={e => setTwitterConfig({...twitterConfig, content: e.target.value})}
+                            className={`w-full bg-black border-4 rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none h-24 transition-colors ${twitterConfig.content.length > 280 ? 'border-rose-400' : 'border-[#95d5b2] focus:border-[#52b788]'}`}
+                            placeholder="Type your reply here..."
+                          />
+                        </div>
+                      )}
+                      <button 
+                        onClick={handleTwitterAction}
+                        disabled={activeActions.twitter || (twitterStatus && twitterStatus[twitterConfig.action]?.isHit)}
+                        className={`w-full bg-[#52b788] hover:bg-[#40916c] text-black font-bold py-3 px-4 rounded-lg transition-all border-4 border-[#95d5b2] shadow-[4px_4px_0px_0px_#95d5b2] active:translate-y-[2px] active:shadow-none mt-4 flex items-center justify-center ${activeActions.twitter || (twitterStatus && twitterStatus[twitterConfig.action]?.isHit) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {activeActions.twitter ? (
+                          <>
+                            <RefreshCw size={18} className="mr-2 animate-spin" />
+                            Executing Twitter {twitterConfig.action}...
+                          </>
+                        ) : (
+                          <>
+                            <Twitter size={18} className="mr-2" />
+                            {twitterStatus && twitterStatus[twitterConfig.action]?.isHit ? 'Rate Limit Hit' : 'Execute Twitter Action'}
+                          </>
+                        )}
+                      </button>
                     </div>
-                  )}
-                  <button 
-                    onClick={handleTwitterAction}
-                    disabled={activeActions.twitter}
-                    className={`w-full bg-[#52b788] hover:bg-[#40916c] text-black font-bold py-3 px-4 rounded-lg transition-all border-4 border-[#95d5b2] shadow-[4px_4px_0px_0px_#95d5b2] active:translate-y-[2px] active:shadow-none mt-4 flex items-center justify-center ${activeActions.twitter ? 'opacity-50 cursor-wait' : ''}`}
-                  >
-                    {activeActions.twitter ? (
-                      <>
-                        <RefreshCw size={18} className="mr-2 animate-spin" />
-                        Executing Twitter {twitterConfig.action}...
-                      </>
-                    ) : (
-                      <>
-                        <Twitter size={18} className="mr-2" />
-                        Execute Twitter Action
-                      </>
-                    )}
-                  </button>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-6 shadow-lg shadow-black/80">
+                    <h3 className="text-lg font-medium text-[#d8f3dc] mb-4 flex items-center">
+                      <Shield size={18} className="mr-2 text-[#52b788]" />
+                      Rate Limits
+                    </h3>
+                    <div className="space-y-4">
+                      {twitterStatus && Object.entries(twitterStatus).map(([action, status]: [string, any]) => (
+                        <div key={action} className="p-3 bg-black border-2 border-[#1b4332] rounded-lg">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-[#95d5b2]">{action}</span>
+                            {status.isHit ? (
+                              <span className="text-[8px] bg-rose-500/20 text-rose-400 border border-rose-500/50 px-1.5 py-0.5 rounded font-bold uppercase">Limit Hit</span>
+                            ) : status.isApproaching ? (
+                              <span className="text-[8px] bg-amber-500/20 text-amber-400 border border-amber-500/50 px-1.5 py-0.5 rounded font-bold uppercase">Approaching</span>
+                            ) : (
+                              <span className="text-[8px] bg-[#52b788]/20 text-[#52b788] border border-[#52b788]/50 px-1.5 py-0.5 rounded font-bold uppercase">Healthy</span>
+                            )}
+                          </div>
+                          <div className="h-1.5 w-full bg-[#1b4332] rounded-full overflow-hidden mb-1">
+                            <div 
+                              className={`h-full transition-all duration-500 ${status.isHit ? 'bg-rose-500' : status.isApproaching ? 'bg-amber-500' : 'bg-[#52b788]'}`}
+                              style={{ width: `${(status.count / status.limit) * 100}%` }}
+                            />
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] text-[#95d5b2]">{status.count} / {status.limit}</span>
+                            {status.isHit && (
+                              <span className="text-[10px] text-rose-400 font-mono">
+                                Resets: {new Date(status.resetTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {!twitterStatus && (
+                        <div className="text-center py-4 text-[#1b4332]">
+                          <RefreshCw size={24} className="mx-auto mb-2 animate-spin" />
+                          <p className="text-[10px] uppercase tracking-widest">Loading Status...</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-[#1b4332]/20 border-4 border-[#1b4332] rounded-xl p-6">
+                    <h4 className="text-[#d8f3dc] font-bold text-sm mb-2 flex items-center">
+                      <Lock size={14} className="mr-2 text-[#52b788]" />
+                      Safety Note
+                    </h4>
+                    <p className="text-[10px] text-[#95d5b2] leading-relaxed">
+                      Rate limits are enforced per account to prevent temporary bans. If you hit a limit, switch to another account or wait for the reset.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

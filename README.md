@@ -11,23 +11,26 @@ Headless automation suite for Telegram and Twitter.
 
 ## How to Build the Windows Installer (.exe)
 
-Since this environment is sandboxed, you need to build the `.exe` on your local Windows machine.
+I have simplified the build process to a single command.
 
 1.  **Export the Project:**
     -   Go to the **Settings** menu in AI Studio.
     -   Select **Export to ZIP**.
     -   Extract the ZIP file on your local machine.
 
-2.  **Install Dependencies:**
+2.  **One-Click Build:**
     -   Open a terminal (PowerShell or Command Prompt) in the project folder.
-    -   Run: `npm install`
+    -   Run: `npm run build:all`
+    -   This will automatically:
+        -   Install all dependencies.
+        -   Rebuild native modules (like SQLite) for Windows.
+        -   Compile the backend and frontend.
+        -   Generate the installer.
 
-3.  **Build the Installer:**
-    -   Run: `npm run electron:build`
-    -   This will create a `release` folder containing the `AutoPROMO agent Setup.exe` installer.
-
-4.  **Install and Run:**
-    -   Run the generated `.exe` to install the application on your Windows 10 or 11 machine.
+3.  **Find Your Files:**
+    -   Check the `release` folder. You will find:
+        -   `AutoPROMO agent Setup.exe`: A standard installer.
+        -   `AutoPROMO agent.exe`: A **Portable** version (no installation required, just run it).
 
 ## Development Mode
 

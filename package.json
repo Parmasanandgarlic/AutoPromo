@@ -13,6 +13,8 @@
     "clean": "rm -rf dist release server.js electron-main.js",
     "lint": "tsc --noEmit",
     "start": "tsx server.ts",
+    "postinstall": "npx electron-rebuild",
+    "build:all": "npm install && npm run electron:build",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
     "electron:build": "npm run build && npm run build:server && npm run build:electron && electron-builder"
   },
@@ -26,11 +28,14 @@
       "dist/**/*",
       "electron-main.js",
       "server.js",
-      "package.json",
-      "node_modules/**/*"
+      "agent_db.json",
+      "package.json"
     ],
     "win": {
-      "target": "nsis",
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "public/icon.png"
     },
     "nsis": {
@@ -57,6 +62,7 @@
     "vite": "^6.2.0"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.3",
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.25",
     "@types/node": "^22.14.0",

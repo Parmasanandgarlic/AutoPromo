@@ -51,12 +51,21 @@ interface TwitterAccount {
   created_at: string;
 }
 
+interface ProxyConfig {
+  host: string;
+  port: string;
+  user?: string;
+  pass?: string;
+  type: string;
+}
+
 interface ScheduledTwitterAction {
   id: number;
   account: string;
   target: string;
   action: string;
   content?: string;
+  proxy?: ProxyConfig;
   scheduled_at: string;
   status: 'pending' | 'completed' | 'failed';
   error?: string;
@@ -295,13 +304,14 @@ class DB {
     return this.data.scheduled_twitter_actions;
   }
 
-  async addScheduledTwitterAction(account: string, target: string, action: string, scheduledAt: string, content?: string) {
+  async addScheduledTwitterAction(account: string, target: string, action: string, scheduledAt: string, content?: string, proxy?: ProxyConfig) {
     const scheduledAction: ScheduledTwitterAction = {
       id: this.generateId(this.data.scheduled_twitter_actions),
       account,
       target,
       action,
       content,
+      proxy,
       scheduled_at: scheduledAt,
       status: 'pending',
       created_at: new Date().toISOString()

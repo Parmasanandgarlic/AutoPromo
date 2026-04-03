@@ -412,12 +412,26 @@ export default function App() {
       addToast('Please select an account and enter a target', 'error');
       return;
     }
+    if (twitterConfig.action === 'reply' && (!twitterConfig.content || twitterConfig.content.length > 280)) {
+      addToast('Reply content must be between 1 and 280 characters', 'error');
+      return;
+    }
     setActiveActions(prev => ({ ...prev, twitter: true }));
     try {
+      const payload = {
+        ...twitterConfig,
+        proxy: advancedConfig.proxyEnabled ? {
+          host: advancedConfig.proxyHost,
+          port: advancedConfig.proxyPort,
+          user: advancedConfig.proxyUser,
+          pass: advancedConfig.proxyPass,
+          type: advancedConfig.proxyType
+        } : undefined
+      };
       const res = await fetch('/api/twitter/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(twitterConfig)
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to execute Twitter action');
@@ -436,12 +450,26 @@ export default function App() {
       addToast('Please fill in all required fields', 'error');
       return;
     }
+    if (newScheduledTwitterAction.action === 'reply' && (!newScheduledTwitterAction.content || newScheduledTwitterAction.content.length > 280)) {
+      addToast('Reply content must be between 1 and 280 characters', 'error');
+      return;
+    }
     setIsLoading(true);
     try {
+      const payload = {
+        ...newScheduledTwitterAction,
+        proxy: advancedConfig.proxyEnabled ? {
+          host: advancedConfig.proxyHost,
+          port: advancedConfig.proxyPort,
+          user: advancedConfig.proxyUser,
+          pass: advancedConfig.proxyPass,
+          type: advancedConfig.proxyType
+        } : undefined
+      };
       const res = await fetch('/api/twitter/scheduled', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newScheduledTwitterAction)
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to schedule action');
@@ -1273,7 +1301,14 @@ export default function App() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
                   <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-6 shadow-lg shadow-black/80">
-                    <h3 className="text-lg font-medium text-[#d8f3dc] mb-4">Run Twitter Action</h3>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-medium text-[#d8f3dc]">Run Twitter Action</h3>
+                      {advancedConfig.proxyEnabled && (
+                        <span className="bg-[#1b4332] text-[#52b788] text-[10px] px-2 py-1 rounded border border-[#52b788] font-bold uppercase tracking-widest flex items-center">
+                          <Globe size={10} className="mr-1" /> Proxy Active
+                        </span>
+                      )}
+                    </div>
                     <div className="space-y-4">
                       <div>
                         <label className="block text-xs font-medium text-[#95d5b2] mb-1">Select Account</label>
@@ -1329,8 +1364,20 @@ export default function App() {
                       )}
                       <button 
                         onClick={handleTwitterAction}
-                        disabled={!twitterConfig.account || activeActions.twitter || (twitterStatus && twitterStatus[twitterConfig.action]?.isHit)}
-                        className={`w-full bg-[#52b788] hover:bg-[#40916c] text-black font-bold py-3 px-4 rounded-lg transition-all border-4 border-[#95d5b2] shadow-[4px_4px_0px_0px_#95d5b2] active:translate-y-[2px] active:shadow-none mt-4 flex items-center justify-center ${!twitterConfig.account || activeActions.twitter || (twitterStatus && twitterStatus[twitterConfig.action]?.isHit) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={
+                          !twitterConfig.account || 
+                          activeActions.twitter || 
+                          (twitterStatus && twitterStatus[twitterConfig.action]?.isHit) ||
+                          (twitterConfig.action === 'reply' && (!twitterConfig.content || twitterConfig.content.length > 280))
+                        }
+                        className={`w-full bg-[#52b788] hover:bg-[#40916c] text-black font-bold py-3 px-4 rounded-lg transition-all border-4 border-[#95d5b2] shadow-[4px_4px_0px_0px_#95d5b2] active:translate-y-[2px] active:shadow-none mt-4 flex items-center justify-center ${
+                          !twitterConfig.account || 
+                          activeActions.twitter || 
+                          (twitterStatus && twitterStatus[twitterConfig.action]?.isHit) ||
+                          (twitterConfig.action === 'reply' && (!twitterConfig.content || twitterConfig.content.length > 280))
+                            ? 'opacity-50 cursor-not-allowed' 
+                            : ''
+                        }`}
                       >
                         {activeActions.twitter ? (
                           <>
@@ -1348,7 +1395,14 @@ export default function App() {
                   </div>
 
                   <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-6 shadow-lg shadow-black/80">
-                    <h3 className="text-lg font-medium text-[#d8f3dc] mb-4">Schedule Twitter Action</h3>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-medium text-[#d8f3dc]">Schedule Twitter Action</h3>
+                      {advancedConfig.proxyEnabled && (
+                        <span className="bg-[#1b4332] text-[#52b788] text-[10px] px-2 py-1 rounded border border-[#52b788] font-bold uppercase tracking-widest flex items-center">
+                          <Globe size={10} className="mr-1" /> Proxy Active
+                        </span>
+                      )}
+                    </div>
                     <form onSubmit={handleScheduleTwitterAction} className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -1404,19 +1458,32 @@ export default function App() {
                       </div>
                       {newScheduledTwitterAction.action === 'reply' && (
                         <div>
-                          <label className="block text-xs font-medium text-[#95d5b2] mb-1">Reply Content</label>
+                          <div className="flex justify-between items-center mb-1">
+                            <label className="block text-xs font-medium text-[#95d5b2]">Reply Content</label>
+                            <span className={`text-[10px] font-bold ${newScheduledTwitterAction.content.length > 280 ? 'text-rose-400' : 'text-[#95d5b2]'}`}>
+                              {newScheduledTwitterAction.content.length} / 280
+                            </span>
+                          </div>
                           <textarea 
                             value={newScheduledTwitterAction.content} 
                             onChange={e => setNewScheduledTwitterAction({...newScheduledTwitterAction, content: e.target.value})}
-                            className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none h-20 transition-colors"
+                            className={`w-full bg-black border-4 rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none h-20 transition-colors ${newScheduledTwitterAction.content.length > 280 ? 'border-rose-400' : 'border-[#95d5b2] focus:border-[#52b788]'}`}
                             placeholder="Type your reply here..."
                           />
                         </div>
                       )}
                       <button 
                         type="submit"
-                        disabled={isLoading}
-                        className="w-full bg-[#1b4332] hover:bg-[#2d6a4f] text-[#d8f3dc] font-bold py-3 px-4 rounded-lg transition-all border-4 border-[#52b788] shadow-[4px_4px_0px_0px_#52b788] active:translate-y-[2px] active:shadow-none mt-2"
+                        disabled={
+                          isLoading || 
+                          (newScheduledTwitterAction.action === 'reply' && (!newScheduledTwitterAction.content || newScheduledTwitterAction.content.length > 280))
+                        }
+                        className={`w-full bg-[#1b4332] hover:bg-[#2d6a4f] text-[#d8f3dc] font-bold py-3 px-4 rounded-lg transition-all border-4 border-[#52b788] shadow-[4px_4px_0px_0px_#52b788] active:translate-y-[2px] active:shadow-none mt-2 ${
+                          isLoading || 
+                          (newScheduledTwitterAction.action === 'reply' && (!newScheduledTwitterAction.content || newScheduledTwitterAction.content.length > 280))
+                            ? 'opacity-50 cursor-not-allowed' 
+                            : ''
+                        }`}
                       >
                         {isLoading ? 'Scheduling...' : 'Schedule Action'}
                       </button>
@@ -1442,7 +1509,10 @@ export default function App() {
                           {scheduledTwitterActions.filter(a => a.status === 'pending').map(a => (
                             <tr key={a.id} className="border-b border-[#1b4332] hover:bg-[#1b4332]/10 transition-colors">
                               <td className="py-3 px-4 text-[#d8f3dc] text-xs">{a.account}</td>
-                              <td className="py-3 px-4 text-[#d8f3dc] text-xs capitalize">{a.action}</td>
+                              <td className="py-3 px-4 text-[#d8f3dc] text-xs capitalize">
+                                {a.action}
+                                {a.proxy && <Globe size={10} className="inline ml-1 text-[#52b788]" title="Proxy Active" />}
+                              </td>
                               <td className="py-3 px-4 text-[#b7e4c7] text-[10px] truncate max-w-[150px]">{a.target}</td>
                               <td className="py-3 px-4 text-[#95d5b2] text-xs">{new Date(a.scheduled_at).toLocaleString()}</td>
                               <td className="py-3 px-4">

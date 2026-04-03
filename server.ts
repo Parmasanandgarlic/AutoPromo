@@ -187,7 +187,7 @@ async function startServer() {
   });
 
   app.post("/api/twitter/action", async (req, res) => {
-    const { account, target, action, content } = req.body;
+    const { account, target, action, content, proxy } = req.body;
     try {
       const accounts = await db.getTwitterAccounts();
       const accountData = accounts.find(a => a.name === account);
@@ -200,7 +200,8 @@ async function startServer() {
         target, 
         action, 
         { authToken: accountData.auth_token, ct0: accountData.ct0 },
-        content
+        content,
+        proxy
       );
       res.json(result);
     } catch (e: any) {
@@ -252,9 +253,9 @@ async function startServer() {
   });
 
   app.post("/api/twitter/scheduled", async (req, res) => {
-    const { account, target, action, scheduledAt, content } = req.body;
+    const { account, target, action, scheduledAt, content, proxy } = req.body;
     try {
-      const scheduledAction = await db.addScheduledTwitterAction(account, target, action, scheduledAt, content);
+      const scheduledAction = await db.addScheduledTwitterAction(account, target, action, scheduledAt, content, proxy);
       res.json(scheduledAction);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -312,7 +313,8 @@ async function startServer() {
               action.target,
               action.action,
               { authToken: accountData.auth_token, ct0: accountData.ct0 },
-              action.content
+              action.content,
+              action.proxy
             );
             await db.updateScheduledTwitterActionStatus(action.id, 'completed');
           } catch (e: any) {

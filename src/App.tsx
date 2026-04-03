@@ -747,6 +747,16 @@ export default function App() {
                       <span className="text-[#95d5b2] text-[10px] uppercase">Social Engagement</span>
                     </button>
                   </div>
+                  <div className="mt-6 pt-6 border-t-2 border-[#1b4332] flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 rounded-full bg-[#52b788] flex items-center justify-center text-black font-bold text-xs">MW</div>
+                      <div>
+                        <p className="text-[10px] text-[#d8f3dc] font-bold">Creator</p>
+                        <p className="text-[8px] text-[#95d5b2] uppercase tracking-widest">chillwinston789</p>
+                      </div>
+                    </div>
+                    <span className="font-['Indie_Flower'] text-sm text-[#52b788]">I made this =)</span>
+                  </div>
                 </div>
               </div>
             </div>

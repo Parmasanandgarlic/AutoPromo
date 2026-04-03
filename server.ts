@@ -245,6 +245,32 @@ async function startServer() {
     }
   });
 
+  // Scheduled Twitter Actions API
+  app.get("/api/twitter/scheduled", async (req, res) => {
+    const actions = await db.getScheduledTwitterActions();
+    res.json(actions);
+  });
+
+  app.post("/api/twitter/scheduled", async (req, res) => {
+    const { account, target, action, scheduledAt, content } = req.body;
+    try {
+      const scheduledAction = await db.addScheduledTwitterAction(account, target, action, scheduledAt, content);
+      res.json(scheduledAction);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete("/api/twitter/scheduled/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      await db.deleteScheduledTwitterAction(Number(id));
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -260,14 +286,44 @@ async function startServer() {
     });
   }
 
-  // Initialize DB and start server
+  // Initialize DB
   await db.init();
-  
-  // Auto-start active sessions
-  await sessionManager.init();
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    
+    // Start background tasks after server is listening
+    sessionManager.init().catch(e => console.error('Failed to init session manager:', e));
+    
+    // Background worker for scheduled Twitter actions
+    setInterval(async () => {
+      try {
+        const pendingActions = await db.getPendingScheduledTwitterActions();
+        for (const action of pendingActions) {
+          try {
+            const accounts = await db.getTwitterAccounts();
+            const accountData = accounts.find(a => a.name === action.account);
+            if (!accountData) {
+              throw new Error(`Twitter account ${action.account} not found.`);
+            }
+
+            await twitterAutomation.executeAction(
+              action.account,
+              action.target,
+              action.action,
+              { authToken: accountData.auth_token, ct0: accountData.ct0 },
+              action.content
+            );
+            await db.updateScheduledTwitterActionStatus(action.id, 'completed');
+          } catch (e: any) {
+            console.error(`Failed to execute scheduled action ${action.id}:`, e.message);
+            await db.updateScheduledTwitterActionStatus(action.id, 'failed', e.message);
+          }
+        }
+      } catch (e: any) {
+        console.error('Scheduled actions worker error:', e.message);
+      }
+    }, 60000); // Check every minute
   });
 }
 

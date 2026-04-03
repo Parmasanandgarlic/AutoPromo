@@ -36,6 +36,7 @@ export default function App() {
   const handleDownloadWindows = () => {
     addToast('To run on Windows: 1. Export to ZIP (AI Studio menu) 2. Extract 3. Run "build_installer.bat" inside.', 'success');
   };
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [logs, setLogs] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [keywords, setKeywords] = useState<any[]>([]);
@@ -44,6 +45,7 @@ export default function App() {
   const [toasts, setToasts] = useState<{id: number, message: string, type: 'success' | 'error'}[]>([]);
   const [twitterStatus, setTwitterStatus] = useState<any>(null);
   const [twitterAccounts, setTwitterAccounts] = useState<any[]>([]);
+  const [scheduledTwitterActions, setScheduledTwitterActions] = useState<any[]>([]);
 
   const addToast = (message: string, type: 'success' | 'error' = 'success') => {
     const id = Date.now();
@@ -64,6 +66,13 @@ export default function App() {
   const [listenerConfig, setListenerConfig] = useState({ sessionId: '' });
   const [engagementConfig, setEngagementConfig] = useState({ sessionId: '', target: '', action: 'react', emoji: '👍' });
   const [twitterConfig, setTwitterConfig] = useState({ account: '', target: '', action: 'like', content: '' });
+  const [newScheduledTwitterAction, setNewScheduledTwitterAction] = useState({ 
+    account: '', 
+    target: '', 
+    action: 'like', 
+    scheduledAt: '', 
+    content: '' 
+  });
   const [advancedConfig, setAdvancedConfig] = useState({
     multiAccount: false,
     maxAccounts: 5,
@@ -97,13 +106,14 @@ export default function App() {
 
   const fetchData = async () => {
     try {
-      const [logsRes, sessionsRes, keywordsRes, groupsRes, usersRes, twitterAccountsRes] = await Promise.all([
+      const [logsRes, sessionsRes, keywordsRes, groupsRes, usersRes, twitterAccountsRes, scheduledActionsRes] = await Promise.all([
         fetch('/api/logs').then(r => r.json()),
         fetch('/api/sessions').then(r => r.json()),
         fetch('/api/keywords').then(r => r.json()),
         fetch('/api/groups').then(r => r.json()),
         fetch('/api/users').then(r => r.json()),
-        fetch('/api/twitter/accounts').then(r => r.json())
+        fetch('/api/twitter/accounts').then(r => r.json()),
+        fetch('/api/twitter/scheduled').then(r => r.json())
       ]);
       setLogs(Array.isArray(logsRes) ? logsRes : []);
       setSessions(Array.isArray(sessionsRes) ? sessionsRes : []);
@@ -111,6 +121,7 @@ export default function App() {
       setGroups(Array.isArray(groupsRes) ? groupsRes : []);
       setUsers(Array.isArray(usersRes) ? usersRes : []);
       setTwitterAccounts(Array.isArray(twitterAccountsRes) ? twitterAccountsRes : []);
+      setScheduledTwitterActions(Array.isArray(scheduledActionsRes) ? scheduledActionsRes : []);
 
       if (twitterConfig.account) {
         const twitterRes = await fetch(`/api/twitter/status/${twitterConfig.account}`).then(r => r.json());
@@ -120,6 +131,8 @@ export default function App() {
       }
     } catch (e) {
       console.error("Failed to fetch data", e);
+    } finally {
+      setIsInitialLoading(false);
     }
   };
 
@@ -395,8 +408,8 @@ export default function App() {
   };
 
   const handleTwitterAction = async () => {
-    if (!twitterConfig.target) {
-      addToast('Please enter a target', 'error');
+    if (!twitterConfig.account || !twitterConfig.target) {
+      addToast('Please select an account and enter a target', 'error');
       return;
     }
     setActiveActions(prev => ({ ...prev, twitter: true }));
@@ -416,6 +429,63 @@ export default function App() {
       setActiveActions(prev => ({ ...prev, twitter: false }));
     }
   };
+
+  const handleScheduleTwitterAction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newScheduledTwitterAction.account || !newScheduledTwitterAction.target || !newScheduledTwitterAction.scheduledAt) {
+      addToast('Please fill in all required fields', 'error');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/twitter/scheduled', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newScheduledTwitterAction)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to schedule action');
+      setNewScheduledTwitterAction({ account: '', target: '', action: 'like', scheduledAt: '', content: '' });
+      addToast('Action scheduled successfully', 'success');
+      fetchData();
+    } catch (err: any) {
+      addToast(err.message, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteScheduledTwitterAction = async (id: number) => {
+    try {
+      const res = await fetch(`/api/twitter/scheduled/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete scheduled action');
+      addToast('Scheduled action deleted', 'success');
+      fetchData();
+    } catch (err: any) {
+      addToast(err.message, 'error');
+    }
+  };
+
+  if (isInitialLoading) {
+    return (
+      <div className="h-screen w-full bg-black flex flex-col items-center justify-center font-mono text-[#52b788] crt">
+        <div className="mb-8 flex flex-col items-center">
+          <div className="text-4xl font-bold mb-2 animate-pulse tracking-tighter">AUTOPROMO_AGENT</div>
+          <div className="text-xs uppercase tracking-[0.5em] opacity-50">Initializing System Core</div>
+        </div>
+        <div className="w-64 h-1 bg-[#1b4332] rounded-full overflow-hidden">
+          <div className="h-full bg-[#52b788] animate-[loading_2s_ease-in-out_infinite]" style={{ width: '30%' }} />
+        </div>
+        <div className="mt-4 text-[10px] uppercase tracking-widest animate-pulse">Establishing Secure Connection...</div>
+        <style>{`
+          @keyframes loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(300%); }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen w-full overflow-hidden bg-black text-[#d8f3dc] font-mono flex flex-col selection:bg-[#52b788] selection:text-black crt">
@@ -1277,6 +1347,122 @@ export default function App() {
                       </button>
                     </div>
                   </div>
+
+                  <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-6 shadow-lg shadow-black/80">
+                    <h3 className="text-lg font-medium text-[#d8f3dc] mb-4">Schedule Twitter Action</h3>
+                    <form onSubmit={handleScheduleTwitterAction} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-[#95d5b2] mb-1">Select Account</label>
+                          <select 
+                            value={newScheduledTwitterAction.account} 
+                            onChange={e => setNewScheduledTwitterAction({...newScheduledTwitterAction, account: e.target.value})}
+                            className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors"
+                            required
+                          >
+                            <option value="">Select Account...</option>
+                            {twitterAccounts.map(a => (
+                              <option key={a.id} value={a.name}>{a.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-[#95d5b2] mb-1">Execution Time</label>
+                          <input 
+                            type="datetime-local" 
+                            value={newScheduledTwitterAction.scheduledAt} 
+                            onChange={e => setNewScheduledTwitterAction({...newScheduledTwitterAction, scheduledAt: e.target.value})}
+                            className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-[#95d5b2] mb-1">Target</label>
+                          <input 
+                            type="text" 
+                            value={newScheduledTwitterAction.target} 
+                            onChange={e => setNewScheduledTwitterAction({...newScheduledTwitterAction, target: e.target.value})}
+                            className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors"
+                            placeholder="Tweet URL or @username"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-[#95d5b2] mb-1">Action</label>
+                          <select 
+                            value={newScheduledTwitterAction.action} 
+                            onChange={e => setNewScheduledTwitterAction({...newScheduledTwitterAction, action: e.target.value})}
+                            className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none focus:border-[#52b788] transition-colors"
+                          >
+                            <option value="like">Auto-Like</option>
+                            <option value="retweet">Auto-Retweet</option>
+                            <option value="follow">Auto-Follow</option>
+                            <option value="reply">Auto-Reply</option>
+                          </select>
+                        </div>
+                      </div>
+                      {newScheduledTwitterAction.action === 'reply' && (
+                        <div>
+                          <label className="block text-xs font-medium text-[#95d5b2] mb-1">Reply Content</label>
+                          <textarea 
+                            value={newScheduledTwitterAction.content} 
+                            onChange={e => setNewScheduledTwitterAction({...newScheduledTwitterAction, content: e.target.value})}
+                            className="w-full bg-black border-4 border-[#95d5b2] rounded-lg px-4 py-2 text-[#d8f3dc] focus:outline-none h-20 transition-colors"
+                            placeholder="Type your reply here..."
+                          />
+                        </div>
+                      )}
+                      <button 
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full bg-[#1b4332] hover:bg-[#2d6a4f] text-[#d8f3dc] font-bold py-3 px-4 rounded-lg transition-all border-4 border-[#52b788] shadow-[4px_4px_0px_0px_#52b788] active:translate-y-[2px] active:shadow-none mt-2"
+                      >
+                        {isLoading ? 'Scheduling...' : 'Schedule Action'}
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Scheduled Actions List */}
+                  <div className="bg-[#06140f] border-4 border-[#95d5b2] rounded-xl p-6 shadow-lg shadow-black/80">
+                    <h3 className="text-lg font-medium text-[#d8f3dc] mb-4">Pending Scheduled Actions</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b-2 border-[#1b4332]">
+                            <th className="py-3 px-4 text-[#95d5b2] text-[10px] uppercase tracking-widest">Account</th>
+                            <th className="py-3 px-4 text-[#95d5b2] text-[10px] uppercase tracking-widest">Action</th>
+                            <th className="py-3 px-4 text-[#95d5b2] text-[10px] uppercase tracking-widest">Target</th>
+                            <th className="py-3 px-4 text-[#95d5b2] text-[10px] uppercase tracking-widest">Scheduled For</th>
+                            <th className="py-3 px-4 text-[#95d5b2] text-[10px] uppercase tracking-widest">Status</th>
+                            <th className="py-3 px-4 text-[#95d5b2] text-[10px] uppercase tracking-widest">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {scheduledTwitterActions.filter(a => a.status === 'pending').map(a => (
+                            <tr key={a.id} className="border-b border-[#1b4332] hover:bg-[#1b4332]/10 transition-colors">
+                              <td className="py-3 px-4 text-[#d8f3dc] text-xs">{a.account}</td>
+                              <td className="py-3 px-4 text-[#d8f3dc] text-xs capitalize">{a.action}</td>
+                              <td className="py-3 px-4 text-[#b7e4c7] text-[10px] truncate max-w-[150px]">{a.target}</td>
+                              <td className="py-3 px-4 text-[#95d5b2] text-xs">{new Date(a.scheduled_at).toLocaleString()}</td>
+                              <td className="py-3 px-4">
+                                <span className="text-[8px] bg-[#52b788]/20 text-[#52b788] border border-[#52b788]/50 px-1.5 py-0.5 rounded font-bold uppercase">Pending</span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <button onClick={() => handleDeleteScheduledTwitterAction(a.id)} className="text-rose-400/90 hover:text-rose-300 text-[10px] font-bold uppercase">Cancel</button>
+                              </td>
+                            </tr>
+                          ))}
+                          {scheduledTwitterActions.filter(a => a.status === 'pending').length === 0 && (
+                            <tr>
+                              <td colSpan={6} className="py-8 text-center text-[#1b4332] text-xs italic">No pending actions scheduled.</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-6">
@@ -1291,34 +1477,38 @@ export default function App() {
                           <Twitter size={32} className="mx-auto mb-2 text-[#1b4332]" />
                           <p className="text-[10px] uppercase tracking-widest text-[#95d5b2]">Select an account to view limits</p>
                         </div>
-                      ) : twitterStatus ? Object.entries(twitterStatus).map(([action, status]: [string, any]) => (
-                        <div key={action} className="p-3 bg-black border-2 border-[#1b4332] rounded-lg">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-[#95d5b2]">{action}</span>
-                            {status.isHit ? (
-                              <span className="text-[8px] bg-rose-500/20 text-rose-400 border border-rose-500/50 px-1.5 py-0.5 rounded font-bold uppercase">Limit Hit</span>
-                            ) : status.isApproaching ? (
-                              <span className="text-[8px] bg-amber-500/20 text-amber-400 border border-amber-500/50 px-1.5 py-0.5 rounded font-bold uppercase">Approaching</span>
-                            ) : (
-                              <span className="text-[8px] bg-[#52b788]/20 text-[#52b788] border border-[#52b788]/50 px-1.5 py-0.5 rounded font-bold uppercase">Healthy</span>
-                            )}
+                      ) : twitterStatus && !twitterStatus.error ? (
+                        Object.entries(twitterStatus).map(([action, status]: [string, any]) => (
+                          <div key={action} className="p-3 bg-black border-2 border-[#1b4332] rounded-lg">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-[#95d5b2]">{action}</span>
+                              {status.isHit ? (
+                                <span className="text-[8px] bg-rose-500/20 text-rose-400 border border-rose-500/50 px-1.5 py-0.5 rounded font-bold uppercase">Limit Hit</span>
+                              ) : status.isApproaching ? (
+                                <span className="text-[8px] bg-amber-500/20 text-amber-400 border border-amber-500/50 px-1.5 py-0.5 rounded font-bold uppercase">Approaching</span>
+                              ) : (
+                                <span className="text-[8px] bg-[#52b788]/20 text-[#52b788] border border-[#52b788]/50 px-1.5 py-0.5 rounded font-bold uppercase">Healthy</span>
+                              )}
+                            </div>
+                            <div className="h-1.5 w-full bg-[#1b4332] rounded-full overflow-hidden mb-1">
+                              <div 
+                                className={`h-full transition-all duration-500 ${status.isHit ? 'bg-rose-500' : status.isApproaching ? 'bg-amber-500' : 'bg-[#52b788]'}`}
+                                style={{ width: `${(status.count / status.limit) * 100}%` }}
+                              />
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-[10px] text-[#95d5b2]">{status.count} / {status.limit}</span>
+                              {status.isHit && (
+                                <span className="text-[10px] text-rose-400 font-mono">
+                                  Resets: {new Date(status.resetTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div className="h-1.5 w-full bg-[#1b4332] rounded-full overflow-hidden mb-1">
-                            <div 
-                              className={`h-full transition-all duration-500 ${status.isHit ? 'bg-rose-500' : status.isApproaching ? 'bg-amber-500' : 'bg-[#52b788]'}`}
-                              style={{ width: `${(status.count / status.limit) * 100}%` }}
-                            />
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-[10px] text-[#95d5b2]">{status.count} / {status.limit}</span>
-                            {status.isHit && (
-                              <span className="text-[10px] text-rose-400 font-mono">
-                                Resets: {new Date(status.resetTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )) : (
+                        ))
+                      ) : twitterStatus?.error ? (
+                        <div className="text-center py-8 text-rose-400 text-xs italic">Error: {twitterStatus.error}</div>
+                      ) : (
                         <div className="text-center py-4 text-[#1b4332]">
                           <RefreshCw size={24} className="mx-auto mb-2 animate-spin" />
                           <p className="text-[10px] uppercase tracking-widest">Loading Status...</p>

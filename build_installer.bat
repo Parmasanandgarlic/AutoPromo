@@ -15,7 +15,7 @@ pause
 
 echo.
 echo [1/3] Installing dependencies...
-call npm install --no-optional --no-rebuild
+call npm install
 if %errorlevel% neq 0 (
     echo.
     echo ERROR: Failed to install dependencies.

@@ -51,6 +51,18 @@ interface TwitterAccount {
   created_at: string;
 }
 
+interface ScheduledTwitterAction {
+  id: number;
+  account: string;
+  target: string;
+  action: string;
+  content?: string;
+  scheduled_at: string;
+  status: 'pending' | 'completed' | 'failed';
+  error?: string;
+  created_at: string;
+}
+
 interface DBSchema {
   sessions: Session[];
   keywords: Keyword[];
@@ -58,6 +70,7 @@ interface DBSchema {
   scraped_users: ScrapedUser[];
   logs: Log[];
   twitter_accounts: TwitterAccount[];
+  scheduled_twitter_actions: ScheduledTwitterAction[];
 }
 
 class DB {
@@ -70,7 +83,8 @@ class DB {
     groups: [],
     scraped_users: [],
     logs: [],
-    twitter_accounts: []
+    twitter_accounts: [],
+    scheduled_twitter_actions: []
   };
 
   async init() {
@@ -274,6 +288,46 @@ class DB {
   async deleteTwitterAccount(id: number) {
     this.data.twitter_accounts = this.data.twitter_accounts.filter(a => a.id !== id);
     await this.save();
+  }
+
+  // Scheduled Twitter Actions
+  async getScheduledTwitterActions() {
+    return this.data.scheduled_twitter_actions;
+  }
+
+  async addScheduledTwitterAction(account: string, target: string, action: string, scheduledAt: string, content?: string) {
+    const scheduledAction: ScheduledTwitterAction = {
+      id: this.generateId(this.data.scheduled_twitter_actions),
+      account,
+      target,
+      action,
+      content,
+      scheduled_at: scheduledAt,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    };
+    this.data.scheduled_twitter_actions.push(scheduledAction);
+    await this.save();
+    return scheduledAction;
+  }
+
+  async updateScheduledTwitterActionStatus(id: number, status: 'completed' | 'failed', error?: string) {
+    const action = this.data.scheduled_twitter_actions.find(a => a.id === id);
+    if (action) {
+      action.status = status;
+      if (error) action.error = error;
+      await this.save();
+    }
+  }
+
+  async deleteScheduledTwitterAction(id: number) {
+    this.data.scheduled_twitter_actions = this.data.scheduled_twitter_actions.filter(a => a.id !== id);
+    await this.save();
+  }
+
+  async getPendingScheduledTwitterActions() {
+    const now = new Date().toISOString();
+    return this.data.scheduled_twitter_actions.filter(a => a.status === 'pending' && a.scheduled_at <= now);
   }
 }
 
